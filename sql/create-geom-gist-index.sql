@@ -1,0 +1,1 @@
+CREATE INDEX IF NOT EXISTS idx_properties_geom_gist ON properties USING GIST ((ST_SetSRID(ST_GeomFromGeoJSON(geometry),4326)))

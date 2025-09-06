@@ -1,0 +1,25 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Property {
+  id          Int      @id @default(autoincrement())
+  county      String
+  propId      String   @map("prop_id")
+  ownerName   String?  @map("owner_name")
+  situsAddr   String?  @map("situs_addr")
+  mailAddr    String?  @map("mail_addr")
+  landValue   Float?   @map("land_value")
+  mktValue    Float?   @map("mkt_value")
+  gisArea     Float?   @map("gis_area")
+  geometry    String   // GeoJSON string for property boundaries
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  @@index([county])
+  @@map("properties")
+}
