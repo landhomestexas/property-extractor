@@ -14,6 +14,7 @@ interface Property {
 interface PropertyStore {
   selectedProperties: Property[];
   propertyDetails: Record<number, Property>;
+  checkedForSkipTrace: Set<number>;
   county: string;
   loading: boolean;
   loadingDetails: boolean;
@@ -24,16 +25,21 @@ interface PropertyStore {
   setLoading: (loading: boolean) => void;
   setLoadingDetails: (loading: boolean) => void;
   cachePropertyDetails: (details: Record<number, Property>) => void;
+  toggleSkipTraceCheck: (propertyId: number) => void;
+  checkAllForSkipTrace: () => void;
+  uncheckAllForSkipTrace: () => void;
+  removeProperty: (propertyId: number) => void;
 }
 
 export const usePropertyStore = create<PropertyStore>((set, get) => ({
   selectedProperties: [],
   propertyDetails: {},
+  checkedForSkipTrace: new Set(),
   county: 'burnet',
   loading: false,
   loadingDetails: false,
   
-  setCounty: (county) => set({ county, selectedProperties: [], propertyDetails: {} }),
+  setCounty: (county) => set({ county, selectedProperties: [], propertyDetails: {}, checkedForSkipTrace: new Set() }),
   
   toggleProperty: async (propertyId: number) => {
     const state = get();
@@ -93,10 +99,35 @@ export const usePropertyStore = create<PropertyStore>((set, get) => ({
     }
   },
   
-  clearSelection: () => set({ selectedProperties: [] }),
+  clearSelection: () => set({ selectedProperties: [], checkedForSkipTrace: new Set() }),
   setLoading: (loading) => set({ loading }),
   setLoadingDetails: (loading) => set({ loadingDetails: loading }),
   cachePropertyDetails: (details) => set(state => ({
     propertyDetails: { ...state.propertyDetails, ...details }
   })),
+  
+  toggleSkipTraceCheck: (propertyId: number) => set(state => {
+    const newChecked = new Set(state.checkedForSkipTrace);
+    if (newChecked.has(propertyId)) {
+      newChecked.delete(propertyId);
+    } else {
+      newChecked.add(propertyId);
+    }
+    return { checkedForSkipTrace: newChecked };
+  }),
+  
+  checkAllForSkipTrace: () => set(state => ({
+    checkedForSkipTrace: new Set(state.selectedProperties.map(p => p.id))
+  })),
+  
+  uncheckAllForSkipTrace: () => set({ checkedForSkipTrace: new Set() }),
+  
+  removeProperty: (propertyId: number) => set(state => {
+    const newChecked = new Set(state.checkedForSkipTrace);
+    newChecked.delete(propertyId);
+    return {
+      selectedProperties: state.selectedProperties.filter(p => p.id !== propertyId),
+      checkedForSkipTrace: newChecked
+    };
+  }),
 }));

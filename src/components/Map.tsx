@@ -89,7 +89,7 @@ export default function Map() {
   }, [map, geojsonData, boundariesOn]);
 
   useEffect(() => {
-    // Load/clear boundaries when toggle or county changes
+    // Load/ boundaries when toggle or county changes
     if (boundariesOn) {
       loadPropertyBoundaries();
     } else {

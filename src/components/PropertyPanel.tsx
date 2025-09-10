@@ -1,15 +1,21 @@
 "use client";
 
 import { usePropertyStore } from "@/stores/propertyStore";
+import Link from "next/link";
 
 export default function PropertyPanel() {
   const {
     selectedProperties,
+    checkedForSkipTrace,
     clearSelection,
     county,
     setCounty,
     loading,
     loadingDetails,
+    toggleSkipTraceCheck,
+    checkAllForSkipTrace,
+    uncheckAllForSkipTrace,
+    removeProperty,
   } = usePropertyStore();
 
   const handleExport = async () => {
@@ -94,7 +100,6 @@ export default function PropertyPanel() {
           </div>
         ) : (
           <>
-            {/* Selected Properties List */}
             <div className="flex-1 overflow-y-auto p-4 space-y-2">
               {selectedProperties.map((property) => (
                 <div
@@ -116,13 +121,33 @@ export default function PropertyPanel() {
             </div>
 
             {/* Export Button */}
-            <div className="p-4 border-t">
+            <div className="p-4 border-t space-y-3">
               <button
                 onClick={handleExport}
-                className="w-full bg-blue-600 text-white py-3 px-4 rounded hover:bg-blue-700 font-medium"
+                className="w-full bg-blue-600 text-white py-3 px-4 rounded-lg hover:bg-blue-700 font-medium"
               >
                 Export {selectedProperties.length} Properties to CSV
               </button>
+
+              <Link href="/skip-tracing">
+                <button
+                  className={`w-full py-3 px-4 rounded-lg font-medium ${
+                    selectedProperties.length === 0
+                      ? "bg-gray-400 text-gray-600 cursor-not-allowed"
+                      : "bg-green-600 text-white hover:bg-green-700"
+                  }`}
+                  style={{
+                    pointerEvents:
+                      selectedProperties.length === 0 ? "none" : "auto",
+                  }}
+                >
+                  {selectedProperties.length === 0
+                    ? "Select Properties for Skip Tracing"
+                    : selectedProperties.length === 1
+                    ? "Skip Trace Selected Property →"
+                    : `Skip Trace ${selectedProperties.length} Properties →`}
+                </button>
+              </Link>
             </div>
           </>
         )}
