@@ -6,7 +6,9 @@ import {
   SKIP_TRACE_PROVIDERS,
   getProviderById,
 } from "@/config/skipTraceProviders";
-import { generateSamplePayloads } from "@/utils/skipTraceFormatter";
+import EditableSkipTraceTable, {
+  parseInitialData,
+} from "@/components/EditableSkipTraceTable";
 import Link from "next/link";
 
 interface SkipTraceResult {
@@ -28,9 +30,10 @@ export default function SkipTracingPage() {
   const [skipTraceResults, setSkipTraceResults] = useState<
     Record<number, SkipTraceResult>
   >({});
-  const [selectedProvider, setSelectedProvider] = useState("batchdata");
+  const [selectedProvider, setSelectedProvider] = useState("enformion");
   const [isProcessing, setIsProcessing] = useState(false);
   const [progress, setProgress] = useState({ completed: 0, total: 0 });
+  const [editableData, setEditableData] = useState<Record<number, any>>({});
 
   const checkedProperties = selectedProperties.filter((p) =>
     checkedForSkipTrace.has(p.id)
@@ -38,15 +41,34 @@ export default function SkipTracingPage() {
 
   useEffect(() => {
     const initialResults: Record<number, SkipTraceResult> = {};
+    const initialEditableData: Record<number, any> = {};
+
     selectedProperties.forEach((property) => {
       initialResults[property.id] = {
         propertyId: property.id,
         status: "waiting",
       };
+      initialEditableData[property.id] = parseInitialData(property);
     });
+
     setSkipTraceResults(initialResults);
-    setProgress({ completed: 0, total: selectedProperties.length });
-  }, [selectedProperties]);
+    setEditableData(initialEditableData);
+    setProgress({ completed: 0, total: checkedProperties.length });
+  }, [selectedProperties, checkedForSkipTrace]);
+
+  const handleDataChange = (
+    propertyId: number,
+    field: string,
+    value: string
+  ) => {
+    setEditableData((prev) => ({
+      ...prev,
+      [propertyId]: {
+        ...prev[propertyId],
+        [field]: value,
+      },
+    }));
+  };
 
   const handleSkipTraceAll = async () => {
     if (checkedProperties.length === 0) return;
@@ -60,35 +82,127 @@ export default function SkipTracingPage() {
       return;
     }
 
-    // Generate sample payloads for preview
-    const samplePayloads = generateSamplePayloads(checkedProperties, provider);
-    console.log("Skip Trace Requests that would be sent:");
-    console.log(JSON.stringify(samplePayloads, null, 2));
+    console.log(
+      `Processing ${checkedProperties.length} properties with ${provider.name}`
+    );
 
-    for (const property of checkedProperties) {
-      setSkipTraceResults((prev) => ({
-        ...prev,
-        [property.id]: { ...prev[property.id], status: "processing" },
-      }));
+    if (provider.provider_id === "batchdata") {
+      alert(
+        "BatchData is currently disabled pending documentation review. Please use EnformionGo."
+      );
+      setIsProcessing(false);
+      return;
+    }
 
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+    try {
+      const requestData = checkedProperties.map((property) => {
+        const data = editableData[property.id];
+        return {
+          propertyId: property.id,
+          firstName: data.firstName,
+          middleName: data.middleName,
+          lastName: data.lastName,
+          street: data.street,
+          city: data.city,
+          state: data.state,
+          zip: data.zip,
+        };
+      });
+      console.log("Editable request data:", requestData);
 
-      const mockResult: SkipTraceResult = {
-        propertyId: property.id,
-        status: Math.random() > 0.2 ? "completed" : "failed",
-        phone: Math.random() > 0.3 ? "(512) 555-0123" : undefined,
-        email: Math.random() > 0.4 ? "owner@example.com" : undefined,
-        additionalContacts:
-          Math.random() > 0.6 ? ["Spouse: (512) 555-0124"] : undefined,
-        error: Math.random() > 0.8 ? "No contact information found" : undefined,
-      };
+      // Reset progress for checked properties only
+      setProgress({ completed: 0, total: checkedProperties.length });
 
-      setSkipTraceResults((prev) => ({
-        ...prev,
-        [property.id]: mockResult,
-      }));
+      // Process properties one by one for real-time updates
+      for (let i = 0; i < checkedProperties.length; i++) {
+        const property = checkedProperties[i];
+        const data = editableData[property.id];
 
-      setProgress((prev) => ({ ...prev, completed: prev.completed + 1 }));
+        // Set to processing
+        setSkipTraceResults((prev) => ({
+          ...prev,
+          [property.id]: { ...prev[property.id], status: "processing" },
+        }));
+
+        try {
+          const response = await fetch(`/api/skip-trace/${selectedProvider}`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              properties: [
+                {
+                  propertyId: property.id,
+                  firstName: data.firstName,
+                  middleName: data.middleName,
+                  lastName: data.lastName,
+                  street: data.street,
+                  city: data.city,
+                  state: data.state,
+                  zip: data.zip,
+                },
+              ],
+              endpoint: provider.endpoint,
+            }),
+          });
+
+          const { results } = await response.json();
+          const result = results[0];
+
+          if (result) {
+            const formattedResult: SkipTraceResult = {
+              propertyId: result.propertyId,
+              status: result.status,
+              phone: result.data?.phone,
+              email: result.data?.email,
+              additionalContacts: result.data?.additionalContacts,
+              error: result.error,
+            };
+
+            setSkipTraceResults((prev) => ({
+              ...prev,
+              [result.propertyId]: formattedResult,
+            }));
+          }
+        } catch (error) {
+          setSkipTraceResults((prev) => ({
+            ...prev,
+            [property.id]: {
+              ...prev[property.id],
+              status: "failed",
+              error: "Network error",
+            },
+          }));
+        }
+
+        // Update progress after each property
+        setProgress((prev) => ({ ...prev, completed: i + 1 }));
+      }
+    } catch (error) {
+      console.log("API not available, using mock data for testing");
+
+      for (const property of checkedProperties) {
+        await new Promise((resolve) => setTimeout(resolve, 1000));
+
+        const mockResult: SkipTraceResult = {
+          propertyId: property.id,
+          status: Math.random() > 0.2 ? "completed" : "failed",
+          phone: Math.random() > 0.3 ? "(512) 555-0123" : undefined,
+          email: Math.random() > 0.4 ? "owner@example.com" : undefined,
+          additionalContacts:
+            Math.random() > 0.6 ? ["Spouse: (512) 555-0124"] : undefined,
+          error:
+            Math.random() > 0.8 ? "No contact information found" : undefined,
+        };
+
+        setSkipTraceResults((prev) => ({
+          ...prev,
+          [property.id]: mockResult,
+        }));
+
+        setProgress((prev) => ({ ...prev, completed: prev.completed + 1 }));
+      }
     }
 
     setIsProcessing(false);
@@ -199,7 +313,7 @@ export default function SkipTracingPage() {
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="bg-white shadow-sm border-b">
-        <div className="max-w-7xl mx-auto px-4 py-4 flex justify-between items-center">
+        <div className="px-4 py-4 flex justify-between items-center">
           <div>
             <Link href="/">
               <button className="text-blue-600 hover:text-blue-700 flex items-center">
@@ -233,7 +347,10 @@ export default function SkipTracingPage() {
                 }}
               >
                 {SKIP_TRACE_PROVIDERS.map((provider) => (
-                  <option key={provider.id} value={provider.id}>
+                  <option
+                    key={provider.provider_id}
+                    value={provider.provider_id}
+                  >
                     {provider.name} ({provider.costPerSearch})
                   </option>
                 ))}
@@ -269,7 +386,7 @@ export default function SkipTracingPage() {
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto p-6">
+      <div className="px-4 py-6">
         {progress.total > 0 && (
           <div className="mb-6 bg-white rounded-lg p-4 shadow-sm">
             <div className="flex justify-between text-sm text-gray-600 mb-2">
@@ -294,122 +411,15 @@ export default function SkipTracingPage() {
           </div>
         )}
 
-        <div className="bg-white rounded-lg shadow-sm overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Select
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Status
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Property Address
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Owner Name
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Phone
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Email
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Additional Contacts
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Actions
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {selectedProperties.map((property) => {
-                  const result = skipTraceResults[property.id];
-                  const isChecked = checkedForSkipTrace.has(property.id);
-                  return (
-                    <tr key={property.id} className="hover:bg-gray-50">
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <input
-                          type="checkbox"
-                          checked={isChecked}
-                          onChange={() => toggleSkipTraceCheck(property.id)}
-                          className="rounded"
-                        />
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span
-                          className="text-lg"
-                          title={result?.status || "waiting"}
-                        >
-                          {getStatusIcon(result?.status || "waiting")}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="text-sm font-medium text-gray-900">
-                          {property.situsAddr || "No address"}
-                        </div>
-                        <div className="text-xs text-gray-500">
-                          ID: {property.propId}
-                        </div>
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="text-sm text-gray-900">
-                          {property.ownerName || "Unknown"}
-                        </div>
-                        <div className="text-xs text-gray-500">
-                          ${property.landValue?.toLocaleString() || "N/A"} •{" "}
-                          {property.gisArea?.toFixed(2) || "N/A"} ac
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {result?.phone ||
-                          (result?.status === "processing" ? "..." : "-")}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {result?.email ||
-                          (result?.status === "processing" ? "..." : "-")}
-                      </td>
-                      <td className="px-6 py-4 text-sm text-gray-900">
-                        {result?.additionalContacts?.join(", ") ||
-                          (result?.status === "processing" ? "..." : "-")}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                        <div className="flex items-center space-x-2">
-                          {result?.status === "failed" && (
-                            <button
-                              onClick={() => handleRetryProperty(property.id)}
-                              className="text-blue-600 hover:text-blue-900"
-                            >
-                              Retry
-                            </button>
-                          )}
-                          <button
-                            onClick={() => removeProperty(property.id)}
-                            className="text-red-500 hover:text-red-700"
-                            title="Remove property"
-                          >
-                            🗑️
-                          </button>
-                        </div>
-                        {result?.error && (
-                          <div
-                            className="text-xs text-red-600 mt-1"
-                            title={result.error}
-                          >
-                            Error
-                          </div>
-                        )}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        </div>
+        <EditableSkipTraceTable
+          properties={selectedProperties}
+          provider={getProviderById(selectedProvider)!}
+          checkedProperties={checkedForSkipTrace}
+          onToggleCheck={toggleSkipTraceCheck}
+          onRemoveProperty={removeProperty}
+          onDataChange={handleDataChange}
+          editableData={editableData}
+        />
       </div>
     </div>
   );

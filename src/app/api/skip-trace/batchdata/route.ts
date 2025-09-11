@@ -1,0 +1,86 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { getProviderById } from '@/config/skipTraceProviders';
+import { parsePropertyData } from '@/utils/propertyDataParser';
+
+const BATCHDATA_BASE_URL = 'https://api.batchdata.com';
+
+interface Property {
+  id: number;
+  propId: string;
+  ownerName: string | null;
+  situsAddr: string | null;
+  mailAddr: string | null;
+  landValue: number | null;
+  mktValue: number | null;
+  gisArea: number | null;
+}
+
+export async function POST(request: NextRequest) {
+  try {
+    const { properties, endpoint }: { properties: Property[], endpoint?: string } = await request.json();
+    
+    const provider = getProviderById('batchdata');
+    if (!provider) {
+      return NextResponse.json({ error: 'BatchData provider not configured' }, { status: 500 });
+    }
+
+    const apiEndpoint = endpoint || provider.endpoint;
+    
+    const batchRequest = properties.map(property => {
+        const parsedData = parsePropertyData(property);
+        console.log('parsedData', parsedData);
+      
+      return {
+        ...provider.bodyTemplate,
+        propertyId: parsedData.propertyId,
+        firstName: parsedData.firstName,
+        lastName: parsedData.lastName,
+        address: parsedData.streetAddress,
+        city: parsedData.city,
+        state: parsedData.state,
+        zip: parsedData.zip
+      };
+    });
+
+    const headers = {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${process.env.BATCHDATA_API_KEY}`
+    };
+
+    console.log(`BatchData API Request for ${properties.length} properties:`, {
+      url: `${BATCHDATA_BASE_URL}${apiEndpoint}`,
+      method: provider.method,
+      headers: headers,
+      body: { requests: batchRequest }
+    });
+
+    const response = await fetch(`${BATCHDATA_BASE_URL}${apiEndpoint}`, {
+      method: provider.method,
+      headers: headers,
+      body: JSON.stringify({ requests: batchRequest })
+    });
+
+    if (response.ok) {
+      const data = await response.json();
+      const results = data.results.map((result: any) => ({
+        propertyId: result.propertyId,
+        status: 'completed',
+        data: result
+      }));
+      return NextResponse.json({ results });
+    } else {
+      const errorText = await response.text();
+      const results = properties.map(property => ({
+        propertyId: property.id,
+        status: 'failed',
+        error: `BatchData API error: ${response.status} - ${errorText}`
+      }));
+      return NextResponse.json({ results });
+    }
+
+  } catch (error) {
+    return NextResponse.json({ 
+      error: `BatchData processing failed: ${error instanceof Error ? error.message : 'Unknown error'}` 
+    }, { status: 500 });
+  }
+}
