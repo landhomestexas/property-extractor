@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, memo } from "react";
 import { SkipTraceProvider } from "@/config/skipTraceProviders";
 
 interface Property {
@@ -23,6 +23,35 @@ interface EditablePropertyData {
   city: string;
   state: string;
   zip: string;
+}
+
+// Create a simple input component that doesn't get recreated
+function EditableInput({
+  propertyId,
+  field,
+  value,
+  required,
+  onDataChange,
+}: {
+  propertyId: number;
+  field: string;
+  value: string;
+  required?: boolean;
+  onDataChange: (propertyId: number, field: string, value: string) => void;
+}) {
+  return (
+    <input
+      type="text"
+      value={value || ""}
+      onChange={(e) => onDataChange(propertyId, field, e.target.value)}
+      className={`w-full px-2 py-1.5 text-sm border-2 rounded-md bg-white text-gray-900 font-medium ${
+        required && !value
+          ? "border-red-400 bg-red-50 focus:border-red-500 focus:ring-red-200"
+          : "border-blue-300 focus:border-blue-500 focus:ring-blue-200"
+      } focus:outline-none focus:ring-1 transition-colors`}
+      placeholder={required ? "Required" : "Optional"}
+    />
+  );
 }
 
 interface EditableSkipTraceTableProps {
@@ -87,30 +116,6 @@ export default function EditableSkipTraceTable({
   onDataChange,
   editableData,
 }: EditableSkipTraceTableProps) {
-  const EditableCell = ({
-    propertyId,
-    field,
-    value,
-    required = false,
-  }: {
-    propertyId: number;
-    field: string;
-    value: string;
-    required?: boolean;
-  }) => (
-    <input
-      type="text"
-      value={value}
-      onChange={(e) => onDataChange(propertyId, field, e.target.value)}
-      className={`w-full px-2 py-1.5 text-sm border-2 rounded-md bg-white text-gray-900 font-medium ${
-        required && !value
-          ? "border-red-400 bg-red-50 focus:border-red-500 focus:ring-red-200"
-          : "border-blue-300 focus:border-blue-500 focus:ring-blue-200"
-      } focus:outline-none focus:ring-1 transition-colors`}
-      placeholder={required ? "Required" : "Optional"}
-    />
-  );
-
   if (provider.provider_id !== "enformion") {
     return (
       <div className="bg-white rounded-lg shadow-sm p-8 text-center">
@@ -134,34 +139,49 @@ export default function EditableSkipTraceTable({
         <table className="w-full divide-y divide-gray-200 table-fixed">
           <thead className="bg-gray-50">
             <tr>
-              <th className="w-12 px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                ☑
+              <th className="w-12 px-2 py-3 text-center text-xs font-medium text-gray-500 uppercase">
+                <input
+                  type="checkbox"
+                  checked={properties.every((p) => checkedProperties.has(p.id))}
+                  onChange={(e) => {
+                    if (e.target.checked) {
+                      properties.forEach((p) => onToggleCheck(p.id));
+                    } else {
+                      properties.forEach((p) => {
+                        if (checkedProperties.has(p.id)) {
+                          onToggleCheck(p.id);
+                        }
+                      });
+                    }
+                  }}
+                  className="w-4 h-4 rounded"
+                />
               </th>
-              <th className="w-48 px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+              <th className="w-48 px-2 py-3 text-center text-xs font-medium text-gray-500 uppercase">
                 Property
               </th>
-              <th className="w-28 px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+              <th className="w-28 px-2 py-3 text-center text-xs font-medium text-gray-500 uppercase">
                 First <span className="text-red-500">*</span>
               </th>
-              <th className="w-24 px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+              <th className="w-24 px-2 py-3 text-center text-xs font-medium text-gray-500 uppercase">
                 Middle
               </th>
-              <th className="w-28 px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+              <th className="w-28 px-2 py-3 text-center text-xs font-medium text-gray-500 uppercase">
                 Last <span className="text-red-500">*</span>
               </th>
-              <th className="w-36 px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+              <th className="w-36 px-2 py-3 text-center text-xs font-medium text-gray-500 uppercase">
                 Street <span className="text-red-500">*</span>
               </th>
-              <th className="w-24 px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+              <th className="w-24 px-2 py-3 text-center text-xs font-medium text-gray-500 uppercase">
                 City <span className="text-red-500">*</span>
               </th>
-              <th className="w-16 px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+              <th className="w-16 px-2 py-3 text-center text-xs font-medium text-gray-500 uppercase">
                 State <span className="text-red-500">*</span>
               </th>
-              <th className="w-20 px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+              <th className="w-20 px-2 py-3 text-center text-xs font-medium text-gray-500 uppercase">
                 ZIP <span className="text-red-500">*</span>
               </th>
-              <th className="w-16 px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+              <th className="w-16 px-2 py-3 text-center text-xs font-medium text-gray-500 uppercase">
                 🗑️
               </th>
             </tr>
@@ -185,7 +205,7 @@ export default function EditableSkipTraceTable({
                       type="checkbox"
                       checked={isChecked}
                       onChange={() => onToggleCheck(property.id)}
-                      className="rounded"
+                      className="w-4 h-4 rounded"
                     />
                   </td>
                   <td className="w-48 px-2 py-3">
@@ -200,58 +220,65 @@ export default function EditableSkipTraceTable({
                     </div>
                   </td>
                   <td className="w-28 px-2 py-3">
-                    <EditableCell
+                    <EditableInput
                       propertyId={property.id}
                       field="firstName"
                       value={data.firstName}
                       required
+                      onDataChange={onDataChange}
                     />
                   </td>
                   <td className="w-24 px-2 py-3">
-                    <EditableCell
+                    <EditableInput
                       propertyId={property.id}
                       field="middleName"
                       value={data.middleName}
+                      onDataChange={onDataChange}
                     />
                   </td>
                   <td className="w-28 px-2 py-3">
-                    <EditableCell
+                    <EditableInput
                       propertyId={property.id}
                       field="lastName"
                       value={data.lastName}
                       required
+                      onDataChange={onDataChange}
                     />
                   </td>
                   <td className="w-36 px-2 py-3">
-                    <EditableCell
+                    <EditableInput
                       propertyId={property.id}
                       field="street"
                       value={data.street}
                       required
+                      onDataChange={onDataChange}
                     />
                   </td>
                   <td className="w-24 px-2 py-3">
-                    <EditableCell
+                    <EditableInput
                       propertyId={property.id}
                       field="city"
                       value={data.city}
                       required
+                      onDataChange={onDataChange}
                     />
                   </td>
                   <td className="w-16 px-2 py-3">
-                    <EditableCell
+                    <EditableInput
                       propertyId={property.id}
                       field="state"
                       value={data.state}
                       required
+                      onDataChange={onDataChange}
                     />
                   </td>
                   <td className="w-20 px-2 py-3">
-                    <EditableCell
+                    <EditableInput
                       propertyId={property.id}
                       field="zip"
                       value={data.zip}
                       required
+                      onDataChange={onDataChange}
                     />
                   </td>
                   <td className="w-16 px-2 py-3 text-center">
