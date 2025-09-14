@@ -22,7 +22,11 @@ export default function PropertyPanel() {
     if (selectedProperties.length === 0) return;
 
     const ids = selectedProperties.map((p) => p.id).join(",");
-    window.open(`/api/export?ids=${ids}`, "_blank");
+    const countyName = county.charAt(0).toUpperCase() + county.slice(1); // Capitalize first letter
+    window.open(
+      `/api/export?ids=${ids}&county=${encodeURIComponent(countyName)}`,
+      "_blank"
+    );
   };
 
   return (
@@ -124,9 +128,18 @@ export default function PropertyPanel() {
             <div className="p-4 border-t space-y-3">
               <button
                 onClick={handleExport}
-                className="w-full bg-blue-600 text-white py-3 px-4 rounded-lg hover:bg-blue-700 font-medium"
+                disabled={selectedProperties.length === 0}
+                className={`w-full py-3 px-4 rounded-lg font-medium ${
+                  selectedProperties.length === 0
+                    ? "bg-gray-400 text-gray-600 cursor-not-allowed"
+                    : "bg-blue-600 text-white hover:bg-blue-700"
+                }`}
               >
-                Export {selectedProperties.length} Properties to CSV
+                {selectedProperties.length === 0
+                  ? "Select Properties to Export"
+                  : selectedProperties.length === 1
+                  ? "Export 1 Property to CSV"
+                  : `Export ${selectedProperties.length} Properties to CSV`}
               </button>
 
               <Link href="/skip-tracing">

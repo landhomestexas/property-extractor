@@ -5,6 +5,7 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const ids = searchParams.get('ids')?.split(',').map(Number) || [];
+    const county = searchParams.get('county') || 'Properties';
     
     if (ids.length === 0) {
       return NextResponse.json({ error: 'No property IDs provided' }, { status: 400 });
@@ -38,10 +39,13 @@ export async function GET(request: NextRequest) {
     
     const csv = csvHeader + csvRows;
     
+    const dateStr = new Date().toISOString().split('T')[0];
+    const filename = `${county}-County-Properties-${dateStr}.csv`;
+    
     return new NextResponse(csv, {
       headers: {
         'Content-Type': 'text/csv',
-        'Content-Disposition': `attachment; filename="properties-${new Date().toISOString().split('T')[0]}.csv"`,
+        'Content-Disposition': `attachment; filename="${filename}"`,
       },
     });
     
