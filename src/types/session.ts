@@ -7,6 +7,7 @@ export interface Property {
   landValue: number | null;
   mktValue: number | null;
   gisArea: number | null;
+  county: string;
 }
 
 export interface EditablePropertyData {

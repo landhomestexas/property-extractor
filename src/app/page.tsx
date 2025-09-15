@@ -17,7 +17,7 @@ export default function HomePage() {
             Property Extractor
           </h3>
           <p className="text-xs text-gray-600 mt-1">
-            Click "Show Boundaries" to start selecting properties
+            Click &quot;Show Boundaries&quot; to start selecting properties
           </p>
         </div>
       </div>

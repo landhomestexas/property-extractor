@@ -1,12 +1,15 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import { MapContainer, TileLayer, GeoJSON } from "react-leaflet";
 import { usePropertyStore } from "@/stores/propertyStore";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
+import type { FeatureCollection } from "geojson";
 
-delete (L.Icon.Default.prototype as any)._getIconUrl;
+delete (
+  L.Icon.Default.prototype as L.Icon.Default & { _getIconUrl?: () => void }
+)._getIconUrl;
 L.Icon.Default.mergeOptions({
   iconRetinaUrl:
     "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon-2x.png",
@@ -17,8 +20,12 @@ L.Icon.Default.mergeOptions({
 });
 
 export default function Map() {
-  const [geojsonData, setGeojsonData] = useState(null);
-  const [filteredData, setFilteredData] = useState(null);
+  const [geojsonData, setGeojsonData] = useState<FeatureCollection | null>(
+    null
+  );
+  const [filteredData, setFilteredData] = useState<FeatureCollection | null>(
+    null
+  );
   const [map, setMap] = useState<L.Map | null>(null);
   const [mapReady, setMapReady] = useState(true);
   const [boundariesOn, setBoundariesOn] = useState(false);
@@ -27,17 +34,21 @@ export default function Map() {
   const { selectedProperties, toggleProperty, county, setLoading } =
     usePropertyStore();
 
-  const canvasRenderer = useRef(L.canvas({ padding: 0.5 }));
+  const filterPropertiesForZoom = useCallback(
+    (
+      data: FeatureCollection | null,
+      zoom: number
+    ): FeatureCollection | null => {
+      if (!data || !data.features) return null;
+      if (zoom < 14) {
+        return { type: "FeatureCollection", features: [] };
+      }
+      return data;
+    },
+    []
+  );
 
-  const filterPropertiesForZoom = (data: any, zoom: number) => {
-    if (!data || !data.features) return null;
-    if (zoom < 14) {
-      return { type: "FeatureCollection", features: [] };
-    }
-    return data;
-  };
-
-  const loadPropertyBoundaries = async () => {
+  const loadPropertyBoundaries = useCallback(async () => {
     setLoading(true);
     setMapReady(false);
 
@@ -54,27 +65,28 @@ export default function Map() {
         setMapReady(true);
         setLoading(false);
       }, 500);
-    } catch (error) {
+    } catch (error: unknown) {
+      console.error("Failed to load property boundaries:", error);
       setLoading(false);
       setMapReady(true);
     }
-  };
+  }, [county, currentZoom, filterPropertiesForZoom, setLoading]);
 
-  const handleMapUpdate = () => {
+  const handleMapUpdate = useCallback(() => {
     if (!map || !geojsonData || !boundariesOn) return;
     const zoom = map.getZoom();
     setCurrentZoom(zoom);
     const filtered = filterPropertiesForZoom(geojsonData, zoom);
     setFilteredData(filtered);
-  };
+  }, [map, geojsonData, boundariesOn, filterPropertiesForZoom]);
 
   const debouncedMapUpdate = useRef<NodeJS.Timeout | null>(null);
-  const handleMapUpdateDebounced = () => {
+  const handleMapUpdateDebounced = useCallback(() => {
     if (debouncedMapUpdate.current) {
       clearTimeout(debouncedMapUpdate.current);
     }
     debouncedMapUpdate.current = setTimeout(handleMapUpdate, 200);
-  };
+  }, [handleMapUpdate]);
 
   useEffect(() => {
     if (map) {
@@ -86,10 +98,10 @@ export default function Map() {
         map.off("moveend", handleMapUpdateDebounced);
       };
     }
-  }, [map, geojsonData, boundariesOn]);
+  }, [map, handleMapUpdate, handleMapUpdateDebounced]);
 
   useEffect(() => {
-    // Load/ boundaries when toggle or county changes
+    // Load boundaries when toggle or county changes
     if (boundariesOn) {
       loadPropertyBoundaries();
     } else {
@@ -97,9 +109,15 @@ export default function Map() {
       setFilteredData(null);
       setMapReady(true);
     }
-  }, [county, boundariesOn]);
+  }, [county, boundariesOn, loadPropertyBoundaries]);
 
-  const onEachFeature = (feature: any, layer: any) => {
+  const onEachFeature = (
+    feature: { properties: { id: number } },
+    layer: L.Layer & {
+      setStyle: (style: L.PathOptions) => void;
+      on: (event: string, handler: (e?: L.LeafletEvent) => void) => void;
+    }
+  ) => {
     const isSelected = selectedProperties.some(
       (p) => p.id === feature.properties.id
     );
@@ -112,7 +130,7 @@ export default function Map() {
       opacity: 1,
     });
 
-    layer.on("click", (e: any) => {
+    layer.on("click", (e: L.LeafletMouseEvent) => {
       e.originalEvent.preventDefault();
       const newColor = isSelected ? "#3b82f6" : "#ef4444";
       const newWeight = isSelected ? 1 : 3;

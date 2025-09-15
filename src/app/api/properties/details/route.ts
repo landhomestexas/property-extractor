@@ -1,6 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 
+interface PropertyDetails {
+  id: number;
+  propId: string;
+  ownerName: string | null;
+  situsAddr: string | null;
+  mailAddr: string | null;
+  landValue: number | null;
+  mktValue: number | null;
+  gisArea: number | null;
+  county: string;
+}
+
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
@@ -43,7 +55,7 @@ export async function GET(request: NextRequest) {
         county: prop.county,
       };
       return acc;
-    }, {} as Record<number, any>);
+    }, {} as Record<number, PropertyDetails>);
     
     return NextResponse.json(propertyDetails);
     

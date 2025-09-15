@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, memo } from "react";
+import React from "react";
 import { SkipTraceProvider } from "@/config/skipTraceProviders";
 
 interface Property {
@@ -12,6 +12,7 @@ interface Property {
   landValue: number | null;
   mktValue: number | null;
   gisArea: number | null;
+  county: string;
 }
 
 interface EditablePropertyData {

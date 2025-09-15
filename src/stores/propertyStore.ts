@@ -9,6 +9,7 @@ interface Property {
   landValue: number | null;
   mktValue: number | null;
   gisArea: number | null;
+  county: string;
 }
 
 interface PropertyStore {
@@ -70,6 +71,7 @@ export const usePropertyStore = create<PropertyStore>((set, get) => ({
       landValue: null,
       mktValue: null,
       gisArea: null,
+      county: state.county,
     };
     
     set(state => ({

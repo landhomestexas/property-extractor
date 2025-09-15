@@ -13,11 +13,33 @@ interface Property {
   landValue: number | null;
   mktValue: number | null;
   gisArea: number | null;
+  county: string;
+}
+
+interface BatchDataRequest {
+  properties: Property[];
+  endpoint?: string;
+}
+
+interface BatchDataApiResponse {
+  results: BatchDataResult[];
+}
+
+interface BatchDataResult {
+  propertyId: number;
+  [key: string]: unknown;
+}
+
+interface SkipTraceResult {
+  propertyId: number;
+  status: 'completed' | 'failed';
+  data?: BatchDataResult;
+  error?: string;
 }
 
 export async function POST(request: NextRequest) {
   try {
-    const { properties, endpoint }: { properties: Property[], endpoint?: string } = await request.json();
+    const { properties, endpoint }: BatchDataRequest = await request.json();
     
     const provider = getProviderById('batchdata');
     if (!provider) {
@@ -61,18 +83,18 @@ export async function POST(request: NextRequest) {
     });
 
     if (response.ok) {
-      const data = await response.json();
-      const results = data.results.map((result: any) => ({
+      const data: BatchDataApiResponse = await response.json();
+      const results: SkipTraceResult[] = data.results.map((result: BatchDataResult) => ({
         propertyId: result.propertyId,
-        status: 'completed',
+        status: 'completed' as const,
         data: result
       }));
       return NextResponse.json({ results });
     } else {
       const errorText = await response.text();
-      const results = properties.map(property => ({
+      const results: SkipTraceResult[] = properties.map((property: Property) => ({
         propertyId: property.id,
-        status: 'failed',
+        status: 'failed' as const,
         error: `BatchData API error: ${response.status} - ${errorText}`
       }));
       return NextResponse.json({ results });

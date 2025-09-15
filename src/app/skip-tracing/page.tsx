@@ -10,6 +10,17 @@ import {
 import EditableSkipTraceTable, {
   parseInitialData,
 } from "@/components/EditableSkipTraceTable";
+
+interface EditablePropertyData {
+  propertyId: number;
+  firstName: string;
+  middleName: string;
+  lastName: string;
+  street: string;
+  city: string;
+  state: string;
+  zip: string;
+}
 import SessionCard from "@/components/SessionCard";
 import { processEnformionResponse } from "@/utils/contactDataProcessor";
 import Link from "next/link";
@@ -41,8 +52,9 @@ export default function SkipTracingPage() {
   const [selectedProvider, setSelectedProvider] = useState("enformion");
   const [isProcessing, setIsProcessing] = useState(false);
   const [progress, setProgress] = useState({ completed: 0, total: 0 });
-  const [editableData, setEditableData] = useState<Record<number, any>>({});
-  const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
+  const [editableData, setEditableData] = useState<
+    Record<number, EditablePropertyData>
+  >({});
 
   const checkedProperties = useMemo(
     () => selectedProperties.filter((p) => checkedForSkipTrace.has(p.id)),
@@ -50,7 +62,7 @@ export default function SkipTracingPage() {
   );
 
   useEffect(() => {
-    const initialEditableData: Record<number, any> = {};
+    const initialEditableData: Record<number, EditablePropertyData> = {};
 
     selectedProperties.forEach((property) => {
       initialEditableData[property.id] = parseInitialData(property);
@@ -94,7 +106,7 @@ export default function SkipTracingPage() {
 
     try {
       // Prepare session data but don't create session yet
-      const sessionEditableData: Record<number, any> = {};
+      const sessionEditableData: Record<number, EditablePropertyData> = {};
       checkedProperties.forEach((property) => {
         sessionEditableData[property.id] = editableData[property.id];
       });
@@ -137,7 +149,6 @@ export default function SkipTracingPage() {
               selectedProvider,
               sessionEditableData
             );
-            setCurrentSessionId(sessionId);
           }
 
           if (result && result.status === "completed") {
@@ -171,8 +182,8 @@ export default function SkipTracingPage() {
         const input = session.inputData[property.id];
 
         return {
-          Session: session.id,
-          Timestamp: session.timestamp.toISOString(),
+          County:
+            property.county.charAt(0).toUpperCase() + property.county.slice(1),
           Provider: session.provider,
           "Property ID": property.propId,
           "Owner Name": property.ownerName || "",

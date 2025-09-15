@@ -9,6 +9,7 @@ interface Property {
   landValue: number | null;
   mktValue: number | null;
   gisArea: number | null;
+  county: string;
 }
 
 interface EditablePropertyData {
@@ -116,8 +117,8 @@ export const useSessionStore = create<SessionStore>((set, get) => ({
       const input = session.inputData[property.id];
       
       return {
-        'Session': session.id,
-        'Timestamp': session.timestamp.toISOString(),
+        'County': property.county.charAt(0).toUpperCase() + property.county.slice(1),
+        'Provider': session.provider,
         'Property ID': property.propId,
         'Owner Name': property.ownerName || '',
         'Property Address': property.situsAddr || '',

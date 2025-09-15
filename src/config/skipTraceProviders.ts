@@ -7,7 +7,7 @@ export interface SkipTraceProvider {
   method: string;
   searchType?: string;
   clientType?: string;
-  bodyTemplate: any;
+  bodyTemplate: Record<string, unknown>;
 }
 
 export const SKIP_TRACE_PROVIDERS: SkipTraceProvider[] = [

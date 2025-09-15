@@ -6,16 +6,11 @@ import Link from "next/link";
 export default function PropertyPanel() {
   const {
     selectedProperties,
-    checkedForSkipTrace,
     clearSelection,
     county,
     setCounty,
     loading,
     loadingDetails,
-    toggleSkipTraceCheck,
-    checkAllForSkipTrace,
-    uncheckAllForSkipTrace,
-    removeProperty,
   } = usePropertyStore();
 
   const handleExport = async () => {

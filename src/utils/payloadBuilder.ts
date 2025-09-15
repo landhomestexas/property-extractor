@@ -10,9 +10,9 @@ interface EditablePropertyData {
 }
 
 export function buildPayloadFromTemplate(
-  template: any, 
+  template: unknown, 
   propertyData: EditablePropertyData
-): any {
+): unknown {
   if (!template || typeof template !== 'object') {
     return template;
   }
@@ -21,9 +21,9 @@ export function buildPayloadFromTemplate(
     return template.map(item => buildPayloadFromTemplate(item, propertyData));
   }
 
-  const result: any = {};
+  const result: Record<string, unknown> = {};
   
-  for (const [key, value] of Object.entries(template)) {
+  for (const [key, value] of Object.entries(template as Record<string, unknown>)) {
     if (typeof value === 'object' && value !== null) {
       result[key] = buildPayloadFromTemplate(value, propertyData);
     } else if (typeof value === 'string') {

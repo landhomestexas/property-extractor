@@ -1,6 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 
+interface ExportableProperty {
+  propId: string;
+  ownerName: string | null;
+  situsAddr: string | null;
+  mailAddr: string | null;
+  landValue: number | null;
+  mktValue: number | null;
+  gisArea: number | null;
+  county: string;
+}
+
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
@@ -11,7 +22,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'No property IDs provided' }, { status: 400 });
     }
     
-    const properties = await prisma.property.findMany({
+    const properties: ExportableProperty[] = await prisma.property.findMany({
       where: { id: { in: ids } },
       select: {
         propId: true,
@@ -26,7 +37,7 @@ export async function GET(request: NextRequest) {
     });
     
     const csvHeader = 'Property_ID,Owner_Name,Property_Address,Mailing_Address,Land_Value,Market_Value,Acreage,County\n';
-    const csvRows = properties.map(p => [
+    const csvRows = properties.map((p: ExportableProperty) => [
       p.propId,
       `"${(p.ownerName || '').replace(/"/g, '""')}"`,
       `"${(p.situsAddr || '').replace(/"/g, '""')}"`,
