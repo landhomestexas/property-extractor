@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/db';
+import { supabase } from '@/lib/supabase';
 
 interface ExportableProperty {
   propId: string;
@@ -22,19 +22,23 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'No property IDs provided' }, { status: 400 });
     }
     
-    const properties: ExportableProperty[] = await prisma.property.findMany({
-      where: { id: { in: ids } },
-      select: {
-        propId: true,
-        ownerName: true,
-        situsAddr: true,
-        mailAddr: true,
-        landValue: true,
-        mktValue: true,
-        gisArea: true,
-        county: true,
-      },
-    });
+    const { data: rawProperties, error } = await supabase
+      .from('properties')
+      .select('prop_id, owner_name, situs_addr, mail_addr, land_value, mkt_value, gis_area, county')
+      .in('id', ids);
+
+    if (error) throw error;
+
+    const properties: ExportableProperty[] = rawProperties.map(p => ({
+      propId: p.prop_id,
+      ownerName: p.owner_name,
+      situsAddr: p.situs_addr,
+      mailAddr: p.mail_addr,
+      landValue: p.land_value,
+      mktValue: p.mkt_value,
+      gisArea: p.gis_area,
+      county: p.county,
+    }));
     
     const csvHeader = 'Property_ID,Owner_Name,Property_Address,Mailing_Address,Land_Value,Market_Value,Acreage,County\n';
     const csvRows = properties.map((p: ExportableProperty) => [
