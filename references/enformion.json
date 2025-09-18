@@ -1,0 +1,119 @@
+{
+    "results": [
+        {
+            "propertyId": 53185,
+            "status": "completed",
+            "data": {
+                "person": {
+                    "name": {
+                        "firstName": "Alvicia",
+                        "middleName": "E",
+                        "lastName": "Longoria"
+                    },
+                    "age": "68",
+                    "addresses": [
+                        {
+                            "firstReportedDate": "9/1/1995",
+                            "lastReportedDate": "8/1/2025",
+                            "street": "307 S Rhomberg St",
+                            "unit": "",
+                            "city": "Burnet",
+                            "state": "TX",
+                            "zip": "78611"
+                        },
+                        {
+                            "firstReportedDate": "12/8/1983",
+                            "lastReportedDate": "10/22/2014",
+                            "street": "303 S Rhomberg St",
+                            "unit": "",
+                            "city": "Burnet",
+                            "state": "TX",
+                            "zip": "78611"
+                        },
+                        {
+                            "firstReportedDate": "12/8/1983",
+                            "lastReportedDate": "6/15/2019",
+                            "street": "305 S Rhomberg St",
+                            "unit": "",
+                            "city": "Burnet",
+                            "state": "TX",
+                            "zip": "78611"
+                        },
+                        {
+                            "firstReportedDate": "1/1/1995",
+                            "lastReportedDate": "1/1/2004",
+                            "street": "807 E League St",
+                            "unit": "",
+                            "city": "Burnet",
+                            "state": "TX",
+                            "zip": "78611"
+                        }
+                    ],
+                    "phones": [
+                        {
+                            "number": "(512) 756-7747",
+                            "type": "landline",
+                            "isConnected": true,
+                            "firstReportedDate": "5/1/1999",
+                            "lastReportedDate": "8/1/2025"
+                        },
+                        {
+                            "number": "(512) 755-2053",
+                            "type": "mobile",
+                            "isConnected": false,
+                            "firstReportedDate": "8/1/2010",
+                            "lastReportedDate": "8/1/2010"
+                        },
+                        {
+                            "number": "(830) 756-7747",
+                            "type": "landline",
+                            "isConnected": false,
+                            "firstReportedDate": "5/1/1999",
+                            "lastReportedDate": "5/1/1999"
+                        },
+                        {
+                            "number": "(210) 315-8272",
+                            "type": "mobile",
+                            "isConnected": true,
+                            "firstReportedDate": "10/1/2017",
+                            "lastReportedDate": "6/5/2024"
+                        },
+                        {
+                            "number": "(714) 397-4958",
+                            "type": "mobile",
+                            "isConnected": true,
+                            "firstReportedDate": "10/25/2021",
+                            "lastReportedDate": "9/7/2023"
+                        }
+                    ],
+                    "emails": [
+                        {
+                            "email": "alvicia.longoria@yahoo.com",
+                            "isValidated": false,
+                            "isBusiness": false
+                        }
+                    ]
+                },
+                "message": "",
+                "identityScore": 100,
+                "pagination": {
+                    "currentPageNumber": 1,
+                    "resultsPerPage": 1,
+                    "totalPages": 1,
+                    "totalResults": 0
+                },
+                "databaseQueryInfo": [],
+                "searchCriteria": [],
+                "totalRequestExecutionTimeMs": 173,
+                "requestId": "46d21fdd-984e-4c46-ab38-083d7a33caf0",
+                "requestType": "DevAPIContactEnrich",
+                "requestTime": "2025-09-10T12:54:24.0094800-07:00",
+                "isError": false,
+                "error": {
+                    "inputErrors": [],
+                    "warnings": []
+                }
+            }
+        }
+    ]
+}
