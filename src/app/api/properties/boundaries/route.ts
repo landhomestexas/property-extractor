@@ -1,26 +1,25 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/db';
+import { supabase } from '@/lib/supabase';
 
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const county = searchParams.get('county') || 'burnet';
     
-    const properties = await prisma.property.findMany({
-      where: { county },
-      select: {
-        id: true,
-        propId: true,
-        geometry: true,
-      },
-    });
+    const { data: properties, error } = await supabase
+      .from('properties')
+      .select('id, prop_id, geometry')
+      .eq('county', county);
+
+    if (error) throw error;
+
     const geojson = {
       type: "FeatureCollection",
       features: properties.map((prop) => ({
         type: "Feature",
         properties: {
           id: prop.id,
-          propId: prop.propId,
+          propId: prop.prop_id,
         },
         geometry: JSON.parse(prop.geometry),
       })),

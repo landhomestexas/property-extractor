@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/db';
+import { supabase } from '@/lib/supabase';
 
 interface PropertyDetails {
   id: number;
@@ -28,30 +28,23 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Valid property IDs required' }, { status: 400 });
     }
     
-    const properties = await prisma.property.findMany({
-      where: { id: { in: ids } },
-      select: {
-        id: true,
-        propId: true,
-        ownerName: true,
-        situsAddr: true,
-        mailAddr: true,
-        landValue: true,
-        mktValue: true,
-        gisArea: true,
-        county: true,
-      },
-    });
+    const { data: properties, error } = await supabase
+      .from('properties')
+      .select('id, prop_id, owner_name, situs_addr, mail_addr, land_value, mkt_value, gis_area, county')
+      .in('id', ids);
+
+    if (error) throw error;
+
     const propertyDetails = properties.reduce((acc, prop) => {
       acc[prop.id] = {
         id: prop.id,
-        propId: prop.propId,
-        ownerName: prop.ownerName,
-        situsAddr: prop.situsAddr,
-        mailAddr: prop.mailAddr,
-        landValue: prop.landValue,
-        mktValue: prop.mktValue,
-        gisArea: prop.gisArea,
+        propId: prop.prop_id,
+        ownerName: prop.owner_name,
+        situsAddr: prop.situs_addr,
+        mailAddr: prop.mail_addr,
+        landValue: prop.land_value,
+        mktValue: prop.mkt_value,
+        gisArea: prop.gis_area,
         county: prop.county,
       };
       return acc;
