@@ -7,7 +7,6 @@
     "build": "next build --turbopack",
     "start": "next start",
     "lint": "eslint",
-    "postinstall": "prisma generate",
     "db:push": "prisma db push",
     "db:seed": "tsx scripts/import-geojson.ts"
   },
