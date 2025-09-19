@@ -51,6 +51,9 @@ export default function PropertyPanel() {
             <option value="burnet" className="font-medium text-gray-900">
               📍 Burnet County
             </option>
+            <option value="madison" className="font-medium text-gray-900">
+              📍 Madison County
+            </option>
             <option value="williamson" disabled className="text-gray-400">
               📍 Williamson County (Coming Soon)
             </option>

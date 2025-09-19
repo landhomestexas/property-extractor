@@ -19,6 +19,14 @@ L.Icon.Default.mergeOptions({
     "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png",
 });
 
+// County center coordinates
+const COUNTY_CENTERS: Record<string, [number, number]> = {
+  burnet: [30.756, -98.234], // Burnet County center
+  madison: [30.95, -95.85], // Madison County center (based on GeoJSON data)
+  williamson: [30.605, -97.67], // Williamson County center
+  travis: [30.266, -97.743], // Travis County center
+};
+
 export default function Map() {
   const [geojsonData, setGeojsonData] = useState<FeatureCollection | null>(
     null
@@ -190,6 +198,15 @@ export default function Map() {
     setFilteredData(null);
   }, [county]);
 
+  // Center map when county changes
+  useEffect(() => {
+    if (map && county && COUNTY_CENTERS[county]) {
+      const center = COUNTY_CENTERS[county];
+      console.log(`🗺️ Centering map on ${county} county:`, center);
+      map.setView(center, 12);
+    }
+  }, [map, county]);
+
   useEffect(() => {
     // Load boundaries when toggle changes
     if (boundariesOn) {
@@ -263,7 +280,7 @@ export default function Map() {
   return (
     <div className="relative">
       <MapContainer
-        center={[30.756, -98.234]}
+        center={COUNTY_CENTERS[county] || COUNTY_CENTERS.burnet}
         zoom={12}
         style={{ height: "100vh", width: "100%" }}
         ref={setMap}
