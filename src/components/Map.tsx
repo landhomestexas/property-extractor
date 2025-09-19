@@ -111,20 +111,8 @@ export default function Map() {
         dataSize: JSON.stringify(data).length,
       });
 
-      if (data.features) {
-        console.log("🏠 Property features sample (first 3):");
-        data.features.slice(0, 3).forEach((feature: any, index: number) => {
-          console.log(`  Feature ${index}:`, {
-            id: feature.properties?.id,
-            propId: feature.properties?.propId,
-            geometryType: feature.geometry?.type,
-            coordinatesLength: feature.geometry?.coordinates?.length,
-          });
-        });
-      }
-
       setGeojsonData(data);
-      setDataFetched(true); // Mark as fetched to prevent future requests
+      setDataFetched(true);
 
       const filtered = filterPropertiesForZoom(data, currentZoom);
       console.log("🎯 Filtered data for zoom level", currentZoom, ":", {
@@ -151,6 +139,7 @@ export default function Map() {
     }
   }, [
     county,
+    currentZoom,
     filterPropertiesForZoom,
     setLoading,
     isLoading,
@@ -292,9 +281,6 @@ export default function Map() {
             key={`${county}-${selectedProperties.length}-${currentZoom}`}
             data={filteredData}
             onEachFeature={(feature, layer) => {
-              const pathLayer = layer as any;
-              const bounds = pathLayer.getBounds ? pathLayer.getBounds() : null;
-              const coords = (feature.geometry as any).coordinates;
               onEachFeature(
                 feature,
                 layer as L.Layer & {

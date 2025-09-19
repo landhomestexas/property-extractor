@@ -50,7 +50,6 @@ export async function POST(request: NextRequest) {
     
     const batchRequest = properties.map(property => {
         const parsedData = parsePropertyData(property);
-        console.log('parsedData', parsedData);
       
       return {
         ...provider.bodyTemplate,
@@ -69,12 +68,12 @@ export async function POST(request: NextRequest) {
       'Authorization': `Bearer ${process.env.BATCHDATA_API_KEY}`
     };
 
-    console.log(`BatchData API Request for ${properties.length} properties:`, {
-      url: `${BATCHDATA_BASE_URL}${apiEndpoint}`,
-      method: provider.method,
-      headers: headers,
-      body: { requests: batchRequest }
-    });
+    // console.log(`BatchData API Request for ${properties.length} properties:`, {
+    //   url: `${BATCHDATA_BASE_URL}${apiEndpoint}`,
+    //   method: provider.method,
+    //   headers: headers,
+    //   body: { requests: batchRequest }
+    // });
 
     const response = await fetch(`${BATCHDATA_BASE_URL}${apiEndpoint}`, {
       method: provider.method,
