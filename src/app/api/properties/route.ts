@@ -9,7 +9,8 @@ export async function GET(request: NextRequest) {
     const { data: properties, error } = await supabase
       .from('properties')
       .select('id, prop_id, owner_name, situs_addr, mail_addr, land_value, mkt_value, gis_area, geometry')
-      .eq('county', county);
+      .eq('county', county)
+      .range(0, 99999); // Use range to bypass 1000 record default limit
 
     if (error) throw error;
 

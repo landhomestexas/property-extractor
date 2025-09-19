@@ -83,9 +83,7 @@ def generate_sql():
             
             count += 1
             
-            # Limit for testing (remove this line for full import)
-            if count >= 500:  # First 500 records for testing
-                break
+            # Full import - all records will be processed
         
         print(";")
         print("")

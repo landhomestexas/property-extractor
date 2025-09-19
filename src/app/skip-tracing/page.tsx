@@ -207,11 +207,17 @@ export default function SkipTracingPage() {
       ),
     ].join("\n");
 
+    // Get county name from first property for filename (assuming all properties are from same county)
+    const countyName = sessions[0]?.properties[0]?.county
+      ? sessions[0].properties[0].county.charAt(0).toUpperCase() +
+        sessions[0].properties[0].county.slice(1)
+      : "Unknown";
+
     const blob = new Blob([csvContent], { type: "text/csv" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `all-skip-trace-sessions-${
+    a.download = `${countyName}-County-All-Skip-Trace-Sessions-${
       new Date().toISOString().split("T")[0]
     }.csv`;
     a.click();

@@ -30,6 +30,8 @@ export default function Map() {
   const [mapReady, setMapReady] = useState(true);
   const [boundariesOn, setBoundariesOn] = useState(false);
   const [currentZoom, setCurrentZoom] = useState(12);
+  const [dataFetched, setDataFetched] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const geoJsonLayerRef = useRef<L.GeoJSON | null>(null);
   const { selectedProperties, toggleProperty, county, setLoading } =
     usePropertyStore();
@@ -40,42 +42,133 @@ export default function Map() {
       zoom: number
     ): FeatureCollection | null => {
       if (!data || !data.features) return null;
-      if (zoom < 14) {
-        return { type: "FeatureCollection", features: [] };
+
+      // For performance with 50k+ properties, show all at higher zoom levels
+      // At lower zoom levels, we could implement clustering or sampling if needed
+      if (zoom >= 10) {
+        console.log(
+          `🎯 Showing all ${data.features.length} properties at zoom ${zoom}`
+        );
+        return data;
       }
+
+      // For very low zoom levels, we might want to show a subset for performance
+      // For now, show all properties since user needs to select them
+      console.log(
+        `🎯 Showing all ${data.features.length} properties at zoom ${zoom} (all zoom levels)`
+      );
       return data;
     },
     []
   );
 
   const loadPropertyBoundaries = useCallback(async () => {
+    // Prevent multiple simultaneous requests
+    if (isLoading) {
+      console.log("⏸️ Already loading data, skipping request");
+      return;
+    }
+
+    // If data is already fetched for this county, don't refetch
+    if (dataFetched && geojsonData) {
+      console.log("✅ Data already cached, applying zoom filter only");
+      const filtered = filterPropertiesForZoom(geojsonData, currentZoom);
+      setFilteredData(filtered);
+      console.log("🎯 Applied zoom filter:", {
+        originalCount: geojsonData.features?.length || 0,
+        filteredCount: filtered?.features?.length || 0,
+        zoomLevel: currentZoom,
+      });
+      return;
+    }
+
+    console.log("🔄 Loading property boundaries for county:", county);
+    setIsLoading(true);
     setLoading(true);
     setMapReady(false);
 
     try {
-      const response = await fetch(
-        `/api/properties/boundaries?county=${county}`
-      );
+      const url = `/api/properties/boundaries?county=${county}&t=${Date.now()}`;
+      console.log("📡 Fetching from URL:", url);
+
+      const response = await fetch(url, {
+        cache: "no-cache",
+        headers: {
+          "Cache-Control": "no-cache",
+          Pragma: "no-cache",
+        },
+      });
+      console.log("📥 Response status:", response.status);
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+
       const data = await response.json();
+      console.log("📊 Raw API response structure:", {
+        type: data.type,
+        featuresCount: data.features?.length || 0,
+        dataSize: JSON.stringify(data).length,
+      });
+
+      if (data.features) {
+        console.log("🏠 Property features sample (first 3):");
+        data.features.slice(0, 3).forEach((feature: any, index: number) => {
+          console.log(`  Feature ${index}:`, {
+            id: feature.properties?.id,
+            propId: feature.properties?.propId,
+            geometryType: feature.geometry?.type,
+            coordinatesLength: feature.geometry?.coordinates?.length,
+          });
+        });
+      }
+
       setGeojsonData(data);
+      setDataFetched(true); // Mark as fetched to prevent future requests
+
       const filtered = filterPropertiesForZoom(data, currentZoom);
+      console.log("🎯 Filtered data for zoom level", currentZoom, ":", {
+        originalCount: data.features?.length || 0,
+        filteredCount: filtered?.features?.length || 0,
+      });
       setFilteredData(filtered);
 
       setTimeout(() => {
         setMapReady(true);
         setLoading(false);
+        setIsLoading(false);
+        console.log(
+          "✅ Map ready with",
+          filtered?.features?.length || 0,
+          "features"
+        );
       }, 500);
     } catch (error: unknown) {
-      console.error("Failed to load property boundaries:", error);
+      console.error("❌ Failed to load property boundaries:", error);
       setLoading(false);
+      setIsLoading(false);
       setMapReady(true);
     }
-  }, [county, currentZoom, filterPropertiesForZoom, setLoading]);
+  }, [
+    county,
+    filterPropertiesForZoom,
+    setLoading,
+    isLoading,
+    dataFetched,
+    geojsonData,
+  ]);
 
   const handleMapUpdate = useCallback(() => {
     if (!map || !geojsonData || !boundariesOn) return;
     const zoom = map.getZoom();
     setCurrentZoom(zoom);
+
+    // Only filter existing data, don't refetch
+    console.log(
+      "🔄 Zoom changed to:",
+      zoom,
+      "- applying filter to cached data"
+    );
     const filtered = filterPropertiesForZoom(geojsonData, zoom);
     setFilteredData(filtered);
   }, [map, geojsonData, boundariesOn, filterPropertiesForZoom]);
@@ -100,8 +193,16 @@ export default function Map() {
     }
   }, [map, handleMapUpdate, handleMapUpdateDebounced]);
 
+  // Reset cache when county changes
   useEffect(() => {
-    // Load boundaries when toggle or county changes
+    console.log("🔄 County changed to:", county, "- resetting cache");
+    setDataFetched(false);
+    setGeojsonData(null);
+    setFilteredData(null);
+  }, [county]);
+
+  useEffect(() => {
+    // Load boundaries when toggle changes
     if (boundariesOn) {
       loadPropertyBoundaries();
     } else {
@@ -109,7 +210,7 @@ export default function Map() {
       setFilteredData(null);
       setMapReady(true);
     }
-  }, [county, boundariesOn, loadPropertyBoundaries]);
+  }, [boundariesOn, loadPropertyBoundaries]);
 
   const onEachFeature = (
     feature: { properties: { id: number } },
@@ -124,8 +225,8 @@ export default function Map() {
 
     layer.setStyle({
       color: isSelected ? "#ef4444" : "#3b82f6",
-      weight: isSelected ? 3 : 1,
-      fillOpacity: isSelected ? 0.2 : 0,
+      weight: isSelected ? 3 : 2,
+      fillOpacity: isSelected ? 0.2 : 0.1,
       fillColor: isSelected ? "#ef4444" : "#3b82f6",
       opacity: 1,
     });
@@ -133,8 +234,8 @@ export default function Map() {
     layer.on("click", (e: L.LeafletMouseEvent) => {
       e.originalEvent.preventDefault();
       const newColor = isSelected ? "#3b82f6" : "#ef4444";
-      const newWeight = isSelected ? 1 : 3;
-      const newFillOpacity = isSelected ? 0 : 0.2;
+      const newWeight = isSelected ? 2 : 3;
+      const newFillOpacity = isSelected ? 0.1 : 0.2;
       layer.setStyle({
         color: newColor,
         weight: newWeight,
@@ -146,8 +247,8 @@ export default function Map() {
       toggleProperty(feature.properties.id).catch(() => {
         layer.setStyle({
           color: isSelected ? "#ef4444" : "#3b82f6",
-          weight: isSelected ? 3 : 1,
-          fillOpacity: isSelected ? 0.2 : 0,
+          weight: isSelected ? 3 : 2,
+          fillOpacity: isSelected ? 0.2 : 0.1,
           fillColor: isSelected ? "#ef4444" : "#3b82f6",
           opacity: 1,
         });
@@ -163,8 +264,8 @@ export default function Map() {
 
     layer.on("mouseout", () => {
       layer.setStyle({
-        weight: isSelected ? 3 : 1,
-        fillOpacity: isSelected ? 0.2 : 0,
+        weight: isSelected ? 3 : 2,
+        fillOpacity: isSelected ? 0.2 : 0.1,
         opacity: 1,
       });
     });
@@ -179,25 +280,40 @@ export default function Map() {
         ref={setMap}
         className="z-0"
         preferCanvas={true}
+        maxZoom={18}
       >
         <TileLayer
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
         />
 
-        {filteredData && mapReady && currentZoom >= 14 && (
+        {filteredData && mapReady && currentZoom >= 8 && (
           <GeoJSON
             key={`${county}-${selectedProperties.length}-${currentZoom}`}
             data={filteredData}
-            onEachFeature={onEachFeature}
+            onEachFeature={(feature, layer) => {
+              const pathLayer = layer as any;
+              const bounds = pathLayer.getBounds ? pathLayer.getBounds() : null;
+              const coords = (feature.geometry as any).coordinates;
+              onEachFeature(
+                feature,
+                layer as L.Layer & {
+                  setStyle: (style: L.PathOptions) => void;
+                  on: (
+                    event: string,
+                    handler: (e?: L.LeafletEvent) => void
+                  ) => void;
+                }
+              );
+            }}
             ref={geoJsonLayerRef}
           />
         )}
 
-        {boundariesOn && currentZoom < 14 && (
+        {boundariesOn && currentZoom < 8 && (
           <div className="leaflet-control leaflet-control-custom">
             <div className="bg-white p-2 rounded shadow-md text-sm">
-              Zoom in to see property boundaries
+              Zoom in to see property boundaries (zoom level 8+)
             </div>
           </div>
         )}

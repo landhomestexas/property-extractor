@@ -136,11 +136,16 @@ export const useSessionStore = create<SessionStore>((set, get) => ({
       ...csvData.map(row => Object.values(row).map(val => `"${val}"`).join(','))
     ].join('\n');
 
+    // Get county name from first property for filename
+    const countyName = session.properties[0]?.county 
+      ? session.properties[0].county.charAt(0).toUpperCase() + session.properties[0].county.slice(1)
+      : 'Unknown';
+
     const blob = new Blob([csvContent], { type: 'text/csv' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `skip-trace-session-${sessionId}-${new Date().toISOString().split('T')[0]}.csv`;
+    a.download = `${countyName}-County-Skip-Trace-Session-${sessionId}-${new Date().toISOString().split('T')[0]}.csv`;
     a.click();
     URL.revokeObjectURL(url);
   },
