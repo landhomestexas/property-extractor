@@ -1,6 +1,7 @@
 "use client";
 
 import { usePropertyStore } from "@/stores/propertyStore";
+import { getAllCounties } from "@/config/counties";
 import Link from "next/link";
 
 export default function PropertyPanel() {
@@ -12,6 +13,8 @@ export default function PropertyPanel() {
     loading,
     loadingDetails,
   } = usePropertyStore();
+
+  const counties = getAllCounties();
 
   const handleExport = async () => {
     if (selectedProperties.length === 0) return;
@@ -48,18 +51,20 @@ export default function PropertyPanel() {
               backgroundSize: "16px",
             }}
           >
-            <option value="burnet" className="font-medium text-gray-900">
-              📍 Burnet County
-            </option>
-            <option value="madison" className="font-medium text-gray-900">
-              📍 Madison County
-            </option>
-            <option value="williamson" disabled className="text-gray-400">
-              📍 Williamson County (Coming Soon)
-            </option>
-            <option value="travis" disabled className="text-gray-400">
-              📍 Travis County (Coming Soon)
-            </option>
+            {counties.map((countyData) => (
+              <option
+                key={countyData.id}
+                value={countyData.id}
+                disabled={!countyData.available}
+                className={
+                  countyData.available
+                    ? "font-medium text-gray-900"
+                    : "text-gray-400"
+                }
+              >
+                {countyData.displayName}
+              </option>
+            ))}
           </select>
         </div>
 

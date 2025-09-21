@@ -3,6 +3,7 @@
 import { useEffect, useState, useRef, useCallback } from "react";
 import { MapContainer, TileLayer, GeoJSON } from "react-leaflet";
 import { usePropertyStore } from "@/stores/propertyStore";
+import { COUNTY_CENTERS } from "@/config/counties";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import type { FeatureCollection } from "geojson";
@@ -18,14 +19,6 @@ L.Icon.Default.mergeOptions({
   shadowUrl:
     "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png",
 });
-
-// County center coordinates
-const COUNTY_CENTERS: Record<string, [number, number]> = {
-  burnet: [30.756, -98.234], // Burnet County center
-  madison: [30.95, -95.85], // Madison County center (based on GeoJSON data)
-  williamson: [30.605, -97.67], // Williamson County center
-  travis: [30.266, -97.743], // Travis County center
-};
 
 export default function Map() {
   const [geojsonData, setGeojsonData] = useState<FeatureCollection | null>(
@@ -51,8 +44,6 @@ export default function Map() {
     ): FeatureCollection | null => {
       if (!data || !data.features) return null;
 
-      // For performance with 50k+ properties, show all at higher zoom levels
-      // At lower zoom levels, we could implement clustering or sampling if needed
       if (zoom >= 10) {
         console.log(
           `🎯 Showing all ${data.features.length} properties at zoom ${zoom}`
@@ -60,8 +51,6 @@ export default function Map() {
         return data;
       }
 
-      // For very low zoom levels, we might want to show a subset for performance
-      // For now, show all properties since user needs to select them
       console.log(
         `🎯 Showing all ${data.features.length} properties at zoom ${zoom} (all zoom levels)`
       );
@@ -71,13 +60,11 @@ export default function Map() {
   );
 
   const loadPropertyBoundaries = useCallback(async () => {
-    // Prevent multiple simultaneous requests
     if (isLoading) {
       console.log("⏸️ Already loading data, skipping request");
       return;
     }
 
-    // If data is already fetched for this county, don't refetch
     if (dataFetched && geojsonData) {
       console.log("✅ Data already cached, applying zoom filter only");
       const filtered = filterPropertiesForZoom(geojsonData, currentZoom);
@@ -160,7 +147,6 @@ export default function Map() {
     const zoom = map.getZoom();
     setCurrentZoom(zoom);
 
-    // Only filter existing data, don't refetch
     console.log(
       "🔄 Zoom changed to:",
       zoom,
@@ -190,7 +176,6 @@ export default function Map() {
     }
   }, [map, handleMapUpdate, handleMapUpdateDebounced]);
 
-  // Reset cache when county changes
   useEffect(() => {
     console.log("🔄 County changed to:", county, "- resetting cache");
     setDataFetched(false);
@@ -198,7 +183,6 @@ export default function Map() {
     setFilteredData(null);
   }, [county]);
 
-  // Center map when county changes
   useEffect(() => {
     if (map && county && COUNTY_CENTERS[county]) {
       const center = COUNTY_CENTERS[county];
@@ -208,7 +192,6 @@ export default function Map() {
   }, [map, county]);
 
   useEffect(() => {
-    // Load boundaries when toggle changes
     if (boundariesOn) {
       loadPropertyBoundaries();
     } else {
