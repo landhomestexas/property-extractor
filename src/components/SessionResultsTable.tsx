@@ -29,7 +29,12 @@ export default function SessionResultsTable({
               Emails
             </th>
             <th className="w-16 px-3 py-2 text-center text-xs font-medium text-gray-500 uppercase">
-              Status
+              <span
+                title="This is the status response of the API"
+                className="cursor-help"
+              >
+                Status
+              </span>
             </th>
           </tr>
         </thead>
@@ -46,6 +51,11 @@ export default function SessionResultsTable({
                   <div className="text-xs text-gray-500 truncate">
                     {property.ownerName}
                   </div>
+                  {result?.foundPersonName && (
+                    <div className="text-xs text-blue-600 font-medium truncate mt-1">
+                      👤 Found: {result.foundPersonName}
+                    </div>
+                  )}
                   <div className="text-xs text-gray-500">
                     ID: {property.propId}
                   </div>

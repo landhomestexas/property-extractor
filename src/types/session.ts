@@ -25,6 +25,8 @@ export interface ContactData {
   mobiles: string[];
   landlines: string[];
   emails: string[];
+  endpointUsed?: string;
+  foundPersonName?: string; 
 }
 
 export interface SkipTraceSession {

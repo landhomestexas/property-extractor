@@ -6,6 +6,7 @@ import { useSessionStore } from "@/stores/sessionStore";
 import {
   SKIP_TRACE_PROVIDERS,
   getProviderById,
+  getProviderByEndpoint,
 } from "@/config/skipTraceProviders";
 import EditableSkipTraceTable, {
   parseInitialData,
@@ -26,7 +27,6 @@ import { processEnformionResponse } from "@/utils/contactDataProcessor";
 import Link from "next/link";
 import { NoPropertiesSelected } from "@/components/EmptyStates";
 
-// Helper function for proper pluralization
 const pluralize = (count: number, singular: string, plural?: string) => {
   const pluralForm = plural || `${singular}s`;
   return `${count} ${count === 1 ? singular : pluralForm}`;
@@ -49,7 +49,9 @@ export default function SkipTracingPage() {
     exportSession,
   } = useSessionStore();
 
-  const [selectedProvider, setSelectedProvider] = useState("enformion");
+  const [selectedProvider, setSelectedProvider] = useState(
+    "enformion|/Contact/Enrich"
+  );
   const [isProcessing, setIsProcessing] = useState(false);
   const [progress, setProgress] = useState({ completed: 0, total: 0 });
   const [editableData, setEditableData] = useState<
@@ -88,7 +90,8 @@ export default function SkipTracingPage() {
     if (checkedProperties.length === 0) return;
 
     setIsProcessing(true);
-    const provider = getProviderById(selectedProvider);
+    const [providerId, endpoint] = selectedProvider.split("|");
+    const provider = getProviderByEndpoint(providerId, endpoint);
 
     if (!provider) {
       console.error("Provider not found");
@@ -98,14 +101,13 @@ export default function SkipTracingPage() {
 
     if (provider.provider_id === "batchdata") {
       alert(
-        "BatchData is currently disabled pending documentation review. Please use EnformionGo."
+        "BatchData is currently disabled pending documentation review. Please use Contact Enrichment or Address ID."
       );
       setIsProcessing(false);
       return;
     }
 
     try {
-      // Prepare session data but don't create session yet
       const sessionEditableData: Record<number, EditablePropertyData> = {};
       checkedProperties.forEach((property) => {
         sessionEditableData[property.id] = editableData[property.id];
@@ -119,7 +121,12 @@ export default function SkipTracingPage() {
         const data = editableData[property.id];
 
         try {
-          const response = await fetch(`/api/skip-trace/${selectedProvider}`, {
+          const apiRoute =
+            provider.endpoint === "/Address/Id"
+              ? "/api/skip-trace/enformion-address"
+              : "/api/skip-trace/enformion";
+
+          const response = await fetch(apiRoute, {
             method: "POST",
             headers: {
               "Content-Type": "application/json",
@@ -153,12 +160,18 @@ export default function SkipTracingPage() {
 
           if (result && result.status === "completed") {
             const contactData = processEnformionResponse(result.data);
+            contactData.endpointUsed = result.endpointUsed || provider.name;
+            if (result.foundPersonName) {
+              contactData.foundPersonName = result.foundPersonName;
+            }
             addResultsToSession(sessionId, property.id, contactData);
           } else if (result) {
             addResultsToSession(sessionId, property.id, {
               mobiles: [],
               landlines: [],
               emails: [],
+              endpointUsed: result.endpointUsed || provider.name,
+              foundPersonName: result.foundPersonName,
             });
           }
         } catch (error) {
@@ -188,12 +201,19 @@ export default function SkipTracingPage() {
           "Property ID": property.propId,
           "Owner Name": property.ownerName || "",
           "Property Address": property.situsAddr || "",
+          "Found Person Name": result?.foundPersonName || "",
           "Input First Name": input?.firstName || "",
           "Input Last Name": input?.lastName || "",
           "All Mobile Phones": result?.mobiles.join("\n") || "",
           "All Landline Phones": result?.landlines.join("\n") || "",
           "All Emails": result?.emails.join("\n") || "",
-          "Contact Found": result ? "Yes" : "No",
+          "Contact Found":
+            result &&
+            ((result.mobiles && result.mobiles.length > 0) ||
+              (result.landlines && result.landlines.length > 0) ||
+              (result.emails && result.emails.length > 0))
+              ? "Yes"
+              : "No",
         };
       })
     );
@@ -207,7 +227,6 @@ export default function SkipTracingPage() {
       ),
     ].join("\n");
 
-    // Get county name from first property for filename (assuming all properties are from same county)
     const countyName = sessions[0]?.properties[0]?.county
       ? sessions[0].properties[0].county.charAt(0).toUpperCase() +
         sessions[0].properties[0].county.slice(1)
@@ -256,7 +275,7 @@ export default function SkipTracingPage() {
                 value={selectedProvider}
                 onChange={(e) => setSelectedProvider(e.target.value)}
                 disabled={isProcessing}
-                className="border-2 border-blue-300 rounded-lg px-4 py-2 pr-12 bg-white text-gray-900 font-medium shadow-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-200 focus:outline-none min-w-[200px] appearance-none"
+                className="border-2 border-blue-300 rounded-lg px-4 py-2 pr-12 bg-white text-gray-900 font-medium shadow-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-200 focus:outline-none min-w-[320px] appearance-none"
                 style={{
                   backgroundImage: `url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e")`,
                   backgroundPosition: "right 16px center",
@@ -266,8 +285,8 @@ export default function SkipTracingPage() {
               >
                 {SKIP_TRACE_PROVIDERS.map((provider) => (
                   <option
-                    key={provider.provider_id}
-                    value={provider.provider_id}
+                    key={`${provider.provider_id}|${provider.endpoint}`}
+                    value={`${provider.provider_id}|${provider.endpoint}`}
                   >
                     {provider.name} ({provider.costPerSearch})
                   </option>
@@ -370,15 +389,57 @@ export default function SkipTracingPage() {
         )}
 
         {viewMode === "input" && (
-          <EditableSkipTraceTable
-            properties={selectedProperties}
-            provider={getProviderById(selectedProvider)!}
-            checkedProperties={checkedForSkipTrace}
-            onToggleCheck={toggleSkipTraceCheck}
-            onRemoveProperty={removeProperty}
-            onDataChange={handleDataChange}
-            editableData={editableData}
-          />
+          <div>
+            {/* Provider Info Section */}
+            <div className="mb-6 space-y-4">
+              {/* Provider description */}
+              {selectedProvider &&
+                (() => {
+                  const [providerId, endpoint] = selectedProvider.split("|");
+                  const provider = getProviderByEndpoint(providerId, endpoint);
+                  return provider ? (
+                    <div className="bg-blue-50 border-l-4 border-blue-400 p-4">
+                      <div className="flex items-start space-x-2">
+                        <div className="text-blue-600 text-sm">📋</div>
+                        <div className="text-sm text-blue-800">
+                          <strong>{provider.name}:</strong>{" "}
+                          {provider.description}
+                        </div>
+                      </div>
+                    </div>
+                  ) : null;
+                })()}
+
+              {/* Warning for Address ID */}
+              {selectedProvider.includes("/Address/Id") && (
+                <div className="bg-amber-50 border-l-4 border-amber-400 p-4">
+                  <div className="flex items-start space-x-2">
+                    <div className="text-amber-600 text-sm">⚠️</div>
+                    <div className="text-sm text-amber-800">
+                      <strong>Important:</strong> When using Address ID, if a
+                      person is found at the address, their name may override
+                      the original owner name in your results table. This
+                      provides more accurate contact information by
+                      automatically chaining to Contact Enrichment.
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <EditableSkipTraceTable
+              properties={selectedProperties}
+              provider={(() => {
+                const [providerId, endpoint] = selectedProvider.split("|");
+                return getProviderByEndpoint(providerId, endpoint)!;
+              })()}
+              checkedProperties={checkedForSkipTrace}
+              onToggleCheck={toggleSkipTraceCheck}
+              onRemoveProperty={removeProperty}
+              onDataChange={handleDataChange}
+              editableData={editableData}
+            />
+          </div>
         )}
 
         {sessions.length > 0 && (

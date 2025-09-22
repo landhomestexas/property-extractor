@@ -2,6 +2,8 @@ interface ContactData {
   mobiles: string[];
   landlines: string[];
   emails: string[];
+  endpointUsed?: string;
+  foundPersonName?: string;
 }
 
 interface Phone {

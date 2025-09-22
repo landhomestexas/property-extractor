@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getProviderById } from '@/config/skipTraceProviders';
+import { getProviderById, getProviderByEndpoint } from '@/config/skipTraceProviders';
 import { buildPayloadFromTemplate } from '@/utils/payloadBuilder';
 
 const ENFORMION_BASE_URL = 'https://devapi.enformion.com';
@@ -19,7 +19,7 @@ export async function POST(request: NextRequest) {
   try {
     const { properties, endpoint }: { properties: EditablePropertyData[], endpoint?: string } = await request.json();
     
-    const provider = getProviderById('enformion');
+    const provider = getProviderByEndpoint('enformion', '/Contact/Enrich');
     if (!provider) {
       return NextResponse.json({ error: 'EnformionGo provider not configured' }, { status: 500 });
     }

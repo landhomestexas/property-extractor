@@ -45,13 +45,14 @@ export default function SessionHeader({
           {session.totalProperties === 1 ? "property" : "properties"}
         </span>
         <span
-          className={`text-sm font-medium ${
+          className={`text-sm font-medium cursor-help ${
             session.successRate >= 70
               ? "text-green-600"
               : session.successRate >= 40
               ? "text-yellow-600"
               : "text-red-600"
           }`}
+          title="Success rate of skip traced properties"
         >
           {session.successRate}% success
         </span>

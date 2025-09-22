@@ -27,6 +27,8 @@ interface ContactData {
   mobiles: string[];
   landlines: string[];
   emails: string[];
+  endpointUsed?: string; 
+  foundPersonName?: string;
 }
 
 interface SkipTraceSession {
@@ -122,12 +124,17 @@ export const useSessionStore = create<SessionStore>((set, get) => ({
         'Property ID': property.propId,
         'Owner Name': property.ownerName || '',
         'Property Address': property.situsAddr || '',
+        'Found Person Name': result?.foundPersonName || '',
         'Input First Name': input?.firstName || '',
         'Input Last Name': input?.lastName || '',
         'All Mobile Phones': result?.mobiles.join('\n') || '',
         'All Landline Phones': result?.landlines.join('\n') || '',
         'All Emails': result?.emails.join('\n') || '',
-        'Contact Found': result ? 'Yes' : 'No'
+        'Contact Found': result && (
+          (result.mobiles && result.mobiles.length > 0) ||
+          (result.landlines && result.landlines.length > 0) ||
+          (result.emails && result.emails.length > 0)
+        ) ? 'Yes' : 'No'
       };
     });
 
@@ -136,7 +143,6 @@ export const useSessionStore = create<SessionStore>((set, get) => ({
       ...csvData.map(row => Object.values(row).map(val => `"${val}"`).join(','))
     ].join('\n');
 
-    // Get county name from first property for filename
     const countyName = session.properties[0]?.county 
       ? session.properties[0].county.charAt(0).toUpperCase() + session.properties[0].county.slice(1)
       : 'Unknown';
