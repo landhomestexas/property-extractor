@@ -1,0 +1,10 @@
+# Supabase CLI per-project configuration (top-level keys, no [project] table)
+# Use your 20-character project ref as project_id.
+
+project_id = "hpizqappbfdlqaqacfbg"
+
+# Optional local overrides (not required for linking/migrations):
+# studio_url = "https://studio.supabase.com" 
+# api_url = "https://api.supabase.com" 
+# db_url = "postgres://..." 
+

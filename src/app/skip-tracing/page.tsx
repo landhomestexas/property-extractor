@@ -12,6 +12,17 @@ import EditableSkipTraceTable, {
   parseInitialData,
 } from "@/components/EditableSkipTraceTable";
 
+interface Property {
+  id: number;
+  propId: string;
+  ownerName: string | null;
+  situsAddr: string | null;
+  mailAddr: string | null;
+  landValue: number | null;
+  mktValue: number | null;
+  gisArea: number | null;
+  county: string;
+}
 interface EditablePropertyData {
   propertyId: number;
   firstName: string;
@@ -38,6 +49,9 @@ export default function SkipTracingPage() {
     checkedForSkipTrace,
     toggleSkipTraceCheck,
     removeProperty,
+    cachePropertyDetails,
+    county,
+    setCounty,
   } = usePropertyStore();
 
   const {
@@ -57,21 +71,73 @@ export default function SkipTracingPage() {
   const [editableData, setEditableData] = useState<
     Record<number, EditablePropertyData>
   >({});
+  const [propertiesFromStorage, setPropertiesFromStorage] = useState<
+    Property[]
+  >([]);
+  const [isLoadingFromStorage, setIsLoadingFromStorage] = useState(true);
+
+  useEffect(() => {
+    const loadPropertiesFromStorage = async () => {
+      try {
+        const storedPropertyIds = localStorage.getItem("skipTracePropertyIds");
+        const storedCounty = localStorage.getItem("skipTraceCounty");
+
+        if (storedPropertyIds && storedCounty) {
+          const propertyIds: number[] = JSON.parse(storedPropertyIds);
+
+          if (county !== storedCounty) {
+            setCounty(storedCounty);
+          }
+
+          const response = await fetch(
+            `/api/properties/details?ids=${propertyIds.join(",")}`
+          );
+          const propertyDetails = await response.json();
+
+          const properties: Property[] = propertyIds
+            .map((id) => ({
+              ...propertyDetails[id],
+              county: storedCounty,
+            }))
+            .filter(Boolean);
+
+          setPropertiesFromStorage(properties);
+          cachePropertyDetails(propertyDetails);
+
+          properties.forEach((property) => {
+            toggleSkipTraceCheck(property.id);
+          });
+
+          localStorage.removeItem("skipTracePropertyIds");
+          localStorage.removeItem("skipTraceCounty");
+        }
+      } catch (error) {
+        console.error("Failed to load properties from storage:", error);
+      } finally {
+        setIsLoadingFromStorage(false);
+      }
+    };
+
+    loadPropertiesFromStorage();
+  }, [county, setCounty, cachePropertyDetails]);
+
+  const effectiveProperties =
+    selectedProperties.length > 0 ? selectedProperties : propertiesFromStorage;
 
   const checkedProperties = useMemo(
-    () => selectedProperties.filter((p) => checkedForSkipTrace.has(p.id)),
-    [selectedProperties, checkedForSkipTrace]
+    () => effectiveProperties.filter((p) => checkedForSkipTrace.has(p.id)),
+    [effectiveProperties, checkedForSkipTrace]
   );
 
   useEffect(() => {
     const initialEditableData: Record<number, EditablePropertyData> = {};
 
-    selectedProperties.forEach((property) => {
+    effectiveProperties.forEach((property) => {
       initialEditableData[property.id] = parseInitialData(property);
     });
 
     setEditableData(initialEditableData);
-  }, [selectedProperties]);
+  }, [effectiveProperties]);
 
   const handleDataChange = useCallback(
     (propertyId: number, field: string, value: string) => {
@@ -243,7 +309,18 @@ export default function SkipTracingPage() {
     URL.revokeObjectURL(url);
   };
 
-  if (selectedProperties.length === 0) {
+  if (isLoadingFromStorage) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading properties...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (effectiveProperties.length === 0) {
     return <NoPropertiesSelected />;
   }
 
@@ -261,8 +338,8 @@ export default function SkipTracingPage() {
               Skip Tracing
             </h1>
             <p className="text-gray-600">
-              {pluralize(selectedProperties.length, "property", "properties")} •{" "}
-              {checkedProperties.length} selected for skip tracing
+              {pluralize(effectiveProperties.length, "property", "properties")}{" "}
+              • {checkedProperties.length} selected for skip tracing
             </p>
           </div>
 
@@ -428,7 +505,7 @@ export default function SkipTracingPage() {
             </div>
 
             <EditableSkipTraceTable
-              properties={selectedProperties}
+              properties={effectiveProperties}
               provider={(() => {
                 const [providerId, endpoint] = selectedProvider.split("|");
                 return getProviderByEndpoint(providerId, endpoint)!;

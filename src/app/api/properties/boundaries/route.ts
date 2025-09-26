@@ -5,31 +5,17 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const county = searchParams.get('county') || 'burnet';
-    
-    console.log("🔍 API: Fetching boundaries for county:", county);
-    
+        
     const { data: properties, error } = await supabase
       .from('properties')
       .select('id, prop_id, geometry')
       .eq('county', county)
-      .range(0, 99999); // Use range to bypass 1000 record default limit
+      .range(0, 99999); 
 
     if (error) {
       console.error("❌ API: Supabase error:", error);
       throw error;
     }
-
-    console.log("📊 API: Raw database response:", {
-      count: properties?.length || 0,
-      requestedRange: "0-99999 (bypassing 1000 default limit)",
-      hitRangeLimit: properties?.length === 100000 ? "⚠️ YES - might be more data!" : "✅ NO - got all data in range",
-      expectedCount: "~50,000 properties",
-      sampleProperties: properties?.slice(0, 3).map(p => ({
-        id: p.id,
-        prop_id: p.prop_id,
-        geometryPreview: p.geometry?.substring(0, 100) + "..."
-      }))
-    });
 
     const geojson = {
       type: "FeatureCollection",
@@ -42,14 +28,6 @@ export async function GET(request: NextRequest) {
         geometry: JSON.parse(prop.geometry),
       })),
     };
-    
-    console.log("🗺️ API: Generated GeoJSON:", {
-      type: geojson.type,
-      featuresCount: geojson.features.length,
-      firstFeatureId: geojson.features[0]?.properties?.id,
-      firstFeaturePropId: geojson.features[0]?.properties?.propId,
-      responseSize: JSON.stringify(geojson).length
-    });
     
     return NextResponse.json(geojson);
     

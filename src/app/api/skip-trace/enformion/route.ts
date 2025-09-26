@@ -40,13 +40,6 @@ export async function POST(request: NextRequest) {
           'Content-Type': 'application/json'
         };
 
-        console.log(`EnformionGo API Request for Property ${property.propertyId}:`, {
-          url: `${ENFORMION_BASE_URL}${apiEndpoint}`,
-          method: provider.method,
-          headers: headers,
-          body: requestBody
-        });
-
         const response = await fetch(`${ENFORMION_BASE_URL}${apiEndpoint}`, {
           method: provider.method,
           headers: headers,

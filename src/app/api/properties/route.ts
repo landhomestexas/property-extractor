@@ -4,13 +4,24 @@ import { supabase } from '@/lib/supabase';
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
-    const county = searchParams.get('county') || 'burnet';
+    const county = searchParams.get('county');
+    const countyId = searchParams.get('countyId');
     
-    const { data: properties, error } = await supabase
+    const defaultCounty = 'burnet';
+    
+    let query = supabase
       .from('properties')
-      .select('id, prop_id, owner_name, situs_addr, mail_addr, land_value, mkt_value, gis_area, geometry')
-      .eq('county', county)
-      .range(0, 99999); // Use range to bypass 1000 record default limit
+      .select('id, prop_id, owner_name, situs_addr, mail_addr, land_value, mkt_value, gis_area, geometry, county, county_id')
+      .range(0, 99999); 
+    
+    if (countyId) {
+      query = query.eq('county_id', parseInt(countyId));
+    } else {
+      const countyFilter = county || defaultCounty;
+      query = query.eq('county', countyFilter);
+    }
+    
+    const { data: properties, error } = await query;
 
     if (error) throw error;
 

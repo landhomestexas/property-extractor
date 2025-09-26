@@ -68,13 +68,6 @@ export async function POST(request: NextRequest) {
       'Authorization': `Bearer ${process.env.BATCHDATA_API_KEY}`
     };
 
-    // console.log(`BatchData API Request for ${properties.length} properties:`, {
-    //   url: `${BATCHDATA_BASE_URL}${apiEndpoint}`,
-    //   method: provider.method,
-    //   headers: headers,
-    //   body: { requests: batchRequest }
-    // });
-
     const response = await fetch(`${BATCHDATA_BASE_URL}${apiEndpoint}`, {
       method: provider.method,
       headers: headers,

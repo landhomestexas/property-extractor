@@ -100,14 +100,7 @@ export async function POST(request: NextRequest) {
           'galaxy-client-type': provider.clientType!,
           'galaxy-search-type': provider.searchType!
         };
-
-        console.log(`Address ID API Request for property ${propertyData.propertyId}:`, {
-          url: `${ENFORMION_BASE_URL}${apiEndpoint}`,
-          method: provider.method,
-          headers: { ...headers, 'galaxy-ap-password': '[HIDDEN]' },
-          body: addressPayload
-        });
-
+        
         const addressResponse = await fetch(`${ENFORMION_BASE_URL}${apiEndpoint}`, {
           method: provider.method,
           headers: headers,

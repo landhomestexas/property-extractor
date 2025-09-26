@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useState, useRef, useCallback } from "react";
-import { MapContainer, TileLayer, GeoJSON } from "react-leaflet";
+import { MapContainer, TileLayer, GeoJSON, Marker } from "react-leaflet";
 import { usePropertyStore } from "@/stores/propertyStore";
+import { useSavedStore } from "@/stores/savedStore";
 import { COUNTY_CENTERS } from "@/config/counties";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
@@ -20,7 +21,11 @@ L.Icon.Default.mergeOptions({
     "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png",
 });
 
-export default function Map() {
+interface MapProps {
+  isDrawerOpen?: boolean;
+}
+
+export default function Map({ isDrawerOpen }: MapProps) {
   const [geojsonData, setGeojsonData] = useState<FeatureCollection | null>(
     null
   );
@@ -33,9 +38,83 @@ export default function Map() {
   const [currentZoom, setCurrentZoom] = useState(12);
   const [dataFetched, setDataFetched] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [showPropertyLabels, setShowPropertyLabels] = useState(true);
   const geoJsonLayerRef = useRef<L.GeoJSON | null>(null);
   const { selectedProperties, toggleProperty, county, setLoading } =
     usePropertyStore();
+  const { isSaved } = useSavedStore();
+
+  const createNumberedIcon = (
+    propId: string,
+    isSelected: boolean,
+    isSavedProperty: boolean
+  ) => {
+    const backgroundColor = isSelected
+      ? "#ef4444"
+      : isSavedProperty
+      ? "#eab308"
+      : "#3b82f6";
+    const textColor = "#ffffff";
+
+    const minWidth = 32;
+    const charWidth = 8;
+    const calculatedWidth = Math.max(minWidth, propId.length * charWidth + 12);
+
+    return L.divIcon({
+      html: `<div style="
+        background-color: ${backgroundColor};
+        color: ${textColor};
+        min-width: ${calculatedWidth}px;
+        height: 24px;
+        border-radius: 6px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 11px;
+        font-weight: bold;
+        border: 2px solid white;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.25);
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        padding: 0 6px;
+        white-space: nowrap;
+      ">${propId}</div>`,
+      className: "property-label",
+      iconSize: [calculatedWidth, 24],
+      iconAnchor: [calculatedWidth / 2, 12],
+    });
+  };
+
+  const calculateCentroid = (geometry: any): [number, number] => {
+    if (geometry.type === "Polygon") {
+      const coords = geometry.coordinates[0];
+      let x = 0,
+        y = 0;
+      const numPoints = coords.length - 1;
+
+      for (let i = 0; i < numPoints; i++) {
+        x += coords[i][0];
+        y += coords[i][1];
+      }
+
+      const centroid: [number, number] = [y / numPoints, x / numPoints];
+      return centroid;
+    }
+    if (geometry.type === "MultiPolygon") {
+      const coords = geometry.coordinates[0][0];
+      let x = 0,
+        y = 0;
+      const numPoints = coords.length - 1;
+
+      for (let i = 0; i < numPoints; i++) {
+        x += coords[i][0];
+        y += coords[i][1];
+      }
+
+      const centroid: [number, number] = [y / numPoints, x / numPoints];
+      return centroid;
+    }
+    return [0, 0];
+  };
 
   const filterPropertiesForZoom = useCallback(
     (
@@ -45,46 +124,37 @@ export default function Map() {
       if (!data || !data.features) return null;
 
       if (zoom >= 10) {
-        console.log(
-          `🎯 Showing all ${data.features.length} properties at zoom ${zoom}`
-        );
         return data;
       }
 
-      console.log(
-        `🎯 Showing all ${data.features.length} properties at zoom ${zoom} (all zoom levels)`
-      );
-      return data;
+      const maxProperties = zoom >= 8 ? 1000 : zoom >= 6 ? 500 : 200;
+      const filteredFeatures = data.features.slice(0, maxProperties);
+
+      return {
+        ...data,
+        features: filteredFeatures,
+      };
     },
     []
   );
 
   const loadPropertyBoundaries = useCallback(async () => {
     if (isLoading) {
-      console.log("⏸️ Already loading data, skipping request");
       return;
     }
 
     if (dataFetched && geojsonData) {
-      console.log("✅ Data already cached, applying zoom filter only");
       const filtered = filterPropertiesForZoom(geojsonData, currentZoom);
       setFilteredData(filtered);
-      console.log("🎯 Applied zoom filter:", {
-        originalCount: geojsonData.features?.length || 0,
-        filteredCount: filtered?.features?.length || 0,
-        zoomLevel: currentZoom,
-      });
       return;
     }
 
-    console.log("🔄 Loading property boundaries for county:", county);
     setIsLoading(true);
     setLoading(true);
     setMapReady(false);
 
     try {
       const url = `/api/properties/boundaries?county=${county}&t=${Date.now()}`;
-      console.log("📡 Fetching from URL:", url);
 
       const response = await fetch(url, {
         cache: "no-cache",
@@ -93,41 +163,26 @@ export default function Map() {
           Pragma: "no-cache",
         },
       });
-      console.log("📥 Response status:", response.status);
 
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
 
       const data = await response.json();
-      console.log("📊 Raw API response structure:", {
-        type: data.type,
-        featuresCount: data.features?.length || 0,
-        dataSize: JSON.stringify(data).length,
-      });
 
       setGeojsonData(data);
       setDataFetched(true);
 
       const filtered = filterPropertiesForZoom(data, currentZoom);
-      console.log("🎯 Filtered data for zoom level", currentZoom, ":", {
-        originalCount: data.features?.length || 0,
-        filteredCount: filtered?.features?.length || 0,
-      });
       setFilteredData(filtered);
 
       setTimeout(() => {
         setMapReady(true);
         setLoading(false);
         setIsLoading(false);
-        console.log(
-          "✅ Map ready with",
-          filtered?.features?.length || 0,
-          "features"
-        );
       }, 500);
     } catch (error: unknown) {
-      console.error("❌ Failed to load property boundaries:", error);
+      console.error("Failed to load property boundaries:", error);
       setLoading(false);
       setIsLoading(false);
       setMapReady(true);
@@ -147,11 +202,6 @@ export default function Map() {
     const zoom = map.getZoom();
     setCurrentZoom(zoom);
 
-    console.log(
-      "🔄 Zoom changed to:",
-      zoom,
-      "- applying filter to cached data"
-    );
     const filtered = filterPropertiesForZoom(geojsonData, zoom);
     setFilteredData(filtered);
   }, [map, geojsonData, boundariesOn, filterPropertiesForZoom]);
@@ -177,7 +227,6 @@ export default function Map() {
   }, [map, handleMapUpdate, handleMapUpdateDebounced]);
 
   useEffect(() => {
-    console.log("🔄 County changed to:", county, "- resetting cache");
     setDataFetched(false);
     setGeojsonData(null);
     setFilteredData(null);
@@ -186,10 +235,59 @@ export default function Map() {
   useEffect(() => {
     if (map && county && COUNTY_CENTERS[county]) {
       const center = COUNTY_CENTERS[county];
-      console.log(`🗺️ Centering map on ${county} county:`, center);
       map.setView(center, 12);
+      setCurrentZoom(12);
     }
   }, [map, county]);
+
+  useEffect(() => {
+    if (map) {
+      const timeouts: NodeJS.Timeout[] = [];
+
+      map.invalidateSize();
+
+      timeouts.push(
+        setTimeout(() => {
+          map.invalidateSize();
+        }, 100)
+      );
+
+      timeouts.push(
+        setTimeout(() => {
+          map.invalidateSize();
+        }, 200)
+      );
+
+      timeouts.push(
+        setTimeout(() => {
+          map.invalidateSize();
+        }, 350)
+      );
+
+      return () => {
+        timeouts.forEach(clearTimeout);
+      };
+    }
+  }, [map, isDrawerOpen]);
+
+  useEffect(() => {
+    if (!map) return;
+
+    const mapContainer = map.getContainer();
+    if (!mapContainer) return;
+
+    const resizeObserver = new ResizeObserver(() => {
+      setTimeout(() => {
+        map.invalidateSize();
+      }, 50);
+    });
+
+    resizeObserver.observe(mapContainer);
+
+    return () => {
+      resizeObserver.disconnect();
+    };
+  }, [map]);
 
   useEffect(() => {
     if (boundariesOn) {
@@ -211,34 +309,72 @@ export default function Map() {
     const isSelected = selectedProperties.some(
       (p) => p.id === feature.properties.id
     );
+    const isPropertySaved = isSaved(feature.properties.id);
+
+    let color = "#3b82f6";
+    let fillColor = "#3b82f6";
+    let weight = 2;
+    let fillOpacity = 0.1;
+
+    if (isPropertySaved && !isSelected) {
+      color = "#eab308";
+      fillColor = "#eab308";
+      weight = 2;
+      fillOpacity = 0.15;
+    }
+
+    if (isSelected) {
+      color = "#ef4444";
+      fillColor = "#ef4444";
+      weight = 3;
+      fillOpacity = 0.2;
+    }
 
     layer.setStyle({
-      color: isSelected ? "#ef4444" : "#3b82f6",
-      weight: isSelected ? 3 : 2,
-      fillOpacity: isSelected ? 0.2 : 0.1,
-      fillColor: isSelected ? "#ef4444" : "#3b82f6",
+      color,
+      weight,
+      fillOpacity,
+      fillColor,
       opacity: 1,
     });
 
     layer.on("click", (e: L.LeafletMouseEvent) => {
       e.originalEvent.preventDefault();
-      const newColor = isSelected ? "#3b82f6" : "#ef4444";
-      const newWeight = isSelected ? 2 : 3;
-      const newFillOpacity = isSelected ? 0.1 : 0.2;
+
+      const newIsSelected = !isSelected;
+      let newColor = "#3b82f6";
+      let newFillColor = "#3b82f6";
+      let newWeight = 2;
+      let newFillOpacity = 0.1;
+
+      if (isPropertySaved && !newIsSelected) {
+        newColor = "#eab308";
+        newFillColor = "#eab308";
+        newWeight = 2;
+        newFillOpacity = 0.15;
+      }
+
+      if (newIsSelected) {
+        newColor = "#ef4444";
+        newFillColor = "#ef4444";
+        newWeight = 3;
+        newFillOpacity = 0.2;
+      }
+
       layer.setStyle({
         color: newColor,
         weight: newWeight,
         fillOpacity: newFillOpacity,
-        fillColor: newColor,
+        fillColor: newFillColor,
         opacity: 1,
       });
 
       toggleProperty(feature.properties.id).catch(() => {
         layer.setStyle({
-          color: isSelected ? "#ef4444" : "#3b82f6",
-          weight: isSelected ? 3 : 2,
-          fillOpacity: isSelected ? 0.2 : 0.1,
-          fillColor: isSelected ? "#ef4444" : "#3b82f6",
+          color,
+          weight,
+          fillOpacity,
+          fillColor,
           opacity: 1,
         });
       });
@@ -253,23 +389,24 @@ export default function Map() {
 
     layer.on("mouseout", () => {
       layer.setStyle({
-        weight: isSelected ? 3 : 2,
-        fillOpacity: isSelected ? 0.2 : 0.1,
+        weight,
+        fillOpacity,
         opacity: 1,
       });
     });
   };
 
   return (
-    <div className="relative">
+    <div className="relative h-full w-full">
       <MapContainer
         center={COUNTY_CENTERS[county] || COUNTY_CENTERS.burnet}
         zoom={12}
-        style={{ height: "100vh", width: "100%" }}
+        style={{ height: "100%", width: "100%" }}
         ref={setMap}
         className="z-0"
         preferCanvas={true}
         maxZoom={18}
+        zoomControl={false}
       >
         <TileLayer
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
@@ -277,35 +414,85 @@ export default function Map() {
         />
 
         {filteredData && mapReady && currentZoom >= 8 && (
-          <GeoJSON
-            key={`${county}-${selectedProperties.length}-${currentZoom}`}
-            data={filteredData}
-            onEachFeature={(feature, layer) => {
-              onEachFeature(
-                feature,
-                layer as L.Layer & {
-                  setStyle: (style: L.PathOptions) => void;
-                  on: (
-                    event: string,
-                    handler: (e?: L.LeafletEvent) => void
-                  ) => void;
-                }
-              );
-            }}
-            ref={geoJsonLayerRef}
-          />
+          <>
+            <GeoJSON
+              key={`${county}-${selectedProperties.length}-${currentZoom}`}
+              data={filteredData}
+              onEachFeature={(feature, layer) => {
+                onEachFeature(
+                  feature,
+                  layer as L.Layer & {
+                    setStyle: (style: L.PathOptions) => void;
+                    on: (
+                      event: string,
+                      handler: (e?: L.LeafletEvent) => void
+                    ) => void;
+                  }
+                );
+              }}
+              ref={geoJsonLayerRef}
+            />
+
+            {/* Property Labels */}
+            {(() => {
+              if (!showPropertyLabels || currentZoom < 10) {
+                return null;
+              }
+
+              const markers = filteredData.features
+                .map((feature, index) => {
+                  if (!feature.properties) {
+                    return null;
+                  }
+
+                  const centroid = calculateCentroid(feature.geometry);
+                  if (centroid[0] === 0 && centroid[1] === 0) {
+                    return null;
+                  }
+
+                  const isSelected = selectedProperties.some(
+                    (p) => p.id === feature.properties!.id
+                  );
+                  const isPropertySaved = isSaved(feature.properties!.id);
+
+                  return (
+                    <Marker
+                      key={`label-${feature.properties.id}`}
+                      position={centroid}
+                      icon={createNumberedIcon(
+                        feature.properties.propId,
+                        isSelected,
+                        isPropertySaved
+                      )}
+                      eventHandlers={{
+                        click: () => {
+                          toggleProperty(feature.properties!.id).catch(
+                            () => {}
+                          );
+                        },
+                      }}
+                    />
+                  );
+                })
+                .filter(Boolean);
+
+              return markers;
+            })()}
+          </>
         )}
 
         {boundariesOn && currentZoom < 8 && (
           <div className="leaflet-control leaflet-control-custom">
             <div className="bg-white p-2 rounded shadow-md text-sm">
               Zoom in to see property boundaries (zoom level 8+)
+              <br />
+              Property numbers appear at zoom level 10+
             </div>
           </div>
         )}
       </MapContainer>
 
-      <div className="absolute top-24 left-4 z-50 flex items-center space-x-2">
+      <div className="absolute top-4 right-4 z-50 flex items-center space-x-2">
         <button
           onClick={() => setBoundariesOn((v) => !v)}
           className={`px-4 py-2 rounded-lg shadow-md text-white ${
@@ -321,6 +508,24 @@ export default function Map() {
         >
           {boundariesOn ? "Hide Boundaries" : "Show Boundaries"}
         </button>
+
+        {boundariesOn && (
+          <button
+            onClick={() => setShowPropertyLabels((v) => !v)}
+            className={`px-4 py-2 rounded-lg shadow-md text-white ${
+              showPropertyLabels
+                ? "bg-green-600 hover:bg-green-700"
+                : "bg-gray-600 hover:bg-gray-700"
+            }`}
+            title={
+              showPropertyLabels
+                ? "Hide property numbers"
+                : "Show property numbers"
+            }
+          >
+            {showPropertyLabels ? "Hide Numbers" : "Show Numbers"}
+          </button>
+        )}
       </div>
 
       {!mapReady && (
