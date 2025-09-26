@@ -5,7 +5,6 @@ import { usePropertyStore } from "@/stores/propertyStore";
 import { useSessionStore } from "@/stores/sessionStore";
 import {
   SKIP_TRACE_PROVIDERS,
-  getProviderById,
   getProviderByEndpoint,
 } from "@/config/skipTraceProviders";
 import EditableSkipTraceTable, {
@@ -119,7 +118,7 @@ export default function SkipTracingPage() {
     };
 
     loadPropertiesFromStorage();
-  }, [county, setCounty, cachePropertyDetails]);
+  }, [county, setCounty, cachePropertyDetails, toggleSkipTraceCheck]);
 
   const effectiveProperties =
     selectedProperties.length > 0 ? selectedProperties : propertiesFromStorage;

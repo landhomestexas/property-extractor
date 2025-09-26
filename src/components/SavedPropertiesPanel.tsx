@@ -20,15 +20,8 @@ export default function SavedPropertiesPanel({
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
   const [showUnsaveAllModal, setShowUnsaveAllModal] = useState(false);
 
-  const {
-    savedProperties,
-    isLoading,
-    error,
-    loadSaved,
-    unsave,
-    getSavedCount,
-    getSavedPropertyIds,
-  } = useSavedStore();
+  const { savedProperties, isLoading, error, loadSaved, unsave } =
+    useSavedStore();
 
   useEffect(() => {
     if (currentCounty || currentCountyId) {
@@ -39,7 +32,6 @@ export default function SavedPropertiesPanel({
   const handleUnsave = async (propertyId: number) => {
     const result = await unsave(propertyId);
     if (!result.success) {
-      // Could show toast notification here
       console.error("Failed to unsave property:", result.message);
     }
   };

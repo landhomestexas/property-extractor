@@ -1,24 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
 
-interface SavedProperty {
-  id: number;
-  property_id: number;
-  created_at: string;
-  properties?: {
-    id: number;
-    prop_id: string;
-    owner_name: string | null;
-    situs_addr: string | null;
-    mail_addr: string | null;
-    land_value: number | null;
-    mkt_value: number | null;
-    gis_area: number | null;
-    county: string;
-    county_id: number | null;
-  };
-}
-
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);

@@ -84,7 +84,7 @@ export default function Map({ isDrawerOpen }: MapProps) {
     });
   };
 
-  const calculateCentroid = (geometry: any): [number, number] => {
+  const calculateCentroid = (geometry: GeoJSON.Geometry): [number, number] => {
     if (geometry.type === "Polygon") {
       const coords = geometry.coordinates[0];
       let x = 0,
@@ -440,7 +440,7 @@ export default function Map({ isDrawerOpen }: MapProps) {
               }
 
               const markers = filteredData.features
-                .map((feature, index) => {
+                .map((feature) => {
                   if (!feature.properties) {
                     return null;
                   }

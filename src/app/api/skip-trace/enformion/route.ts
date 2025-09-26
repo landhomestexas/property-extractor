@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getProviderById, getProviderByEndpoint } from '@/config/skipTraceProviders';
+import { getProviderByEndpoint } from '@/config/skipTraceProviders';
 import { buildPayloadFromTemplate } from '@/utils/payloadBuilder';
 
 const ENFORMION_BASE_URL = 'https://devapi.enformion.com';
