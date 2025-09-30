@@ -38,7 +38,7 @@ export default function Map({ isDrawerOpen }: MapProps) {
   const [currentZoom, setCurrentZoom] = useState(12);
   const [dataFetched, setDataFetched] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [showPropertyLabels, setShowPropertyLabels] = useState(true);
+  const [showPropertyLabels, setShowPropertyLabels] = useState(false);
   const geoJsonLayerRef = useRef<L.GeoJSON | null>(null);
   const { selectedProperties, toggleProperty, county, setLoading } =
     usePropertyStore();

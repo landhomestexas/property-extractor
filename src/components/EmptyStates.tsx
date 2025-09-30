@@ -115,3 +115,34 @@ export function LoadingError() {
     />
   );
 }
+
+// Provider unavailable state
+export function ProviderUnavailable({
+  providerName,
+}: {
+  providerName: string;
+}) {
+  return (
+    <EmptyState
+      title="Provider Not Available"
+      description={`${providerName} integration is not available at the moment, please select another provider.`}
+      icon={
+        <div className="w-16 h-16 mx-auto bg-yellow-100 rounded-full flex items-center justify-center">
+          <svg
+            className="w-8 h-8 text-yellow-500"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+            />
+          </svg>
+        </div>
+      }
+    />
+  );
+}

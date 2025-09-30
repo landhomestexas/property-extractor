@@ -2,6 +2,7 @@
 
 import React from "react";
 import { SkipTraceProvider } from "@/config/skipTraceProviders";
+import { ProviderUnavailable } from "@/components/EmptyStates";
 
 interface Property {
   id: number;
@@ -117,21 +118,15 @@ export default function EditableSkipTraceTable({
   onDataChange,
   editableData,
 }: EditableSkipTraceTableProps) {
-  if (provider.provider_id !== "enformion") {
-    return (
-      <div className="bg-white rounded-lg shadow-sm p-8 text-center">
-        <h3 className="text-lg font-medium text-gray-900 mb-2">
-          Provider Not Available
-        </h3>
-        <p className="text-gray-600">
-          {provider.name} integration is currently disabled pending
-          documentation review.
-        </p>
-        <p className="text-sm text-gray-500 mt-2">
-          Please select EnformionGo (TruePeopleSearch) for now.
-        </p>
-      </div>
-    );
+  const availableProviders = ["enformion", "batchdata"];
+  const unavailableProviders = ["whitepages"];
+
+  if (unavailableProviders.includes(provider.provider_id)) {
+    return <ProviderUnavailable providerName={provider.name} />;
+  }
+
+  if (!availableProviders.includes(provider.provider_id)) {
+    return <ProviderUnavailable providerName={provider.name} />;
   }
 
   return (
@@ -161,15 +156,19 @@ export default function EditableSkipTraceTable({
               <th className="w-48 px-2 py-3 text-center text-xs font-medium text-gray-500 uppercase">
                 Property
               </th>
-              <th className="w-28 px-2 py-3 text-center text-xs font-medium text-gray-500 uppercase">
-                First <span className="text-red-500">*</span>
-              </th>
-              <th className="w-24 px-2 py-3 text-center text-xs font-medium text-gray-500 uppercase">
-                Middle
-              </th>
-              <th className="w-28 px-2 py-3 text-center text-xs font-medium text-gray-500 uppercase">
-                Last <span className="text-red-500">*</span>
-              </th>
+              {provider.provider_id === "enformion" && (
+                <>
+                  <th className="w-28 px-2 py-3 text-center text-xs font-medium text-gray-500 uppercase">
+                    First <span className="text-red-500">*</span>
+                  </th>
+                  <th className="w-24 px-2 py-3 text-center text-xs font-medium text-gray-500 uppercase">
+                    Middle
+                  </th>
+                  <th className="w-28 px-2 py-3 text-center text-xs font-medium text-gray-500 uppercase">
+                    Last <span className="text-red-500">*</span>
+                  </th>
+                </>
+              )}
               <th className="w-36 px-2 py-3 text-center text-xs font-medium text-gray-500 uppercase">
                 Street <span className="text-red-500">*</span>
               </th>
@@ -220,32 +219,36 @@ export default function EditableSkipTraceTable({
                       ID: {property.propId}
                     </div>
                   </td>
-                  <td className="w-28 px-2 py-3">
-                    <EditableInput
-                      propertyId={property.id}
-                      field="firstName"
-                      value={data.firstName}
-                      required
-                      onDataChange={onDataChange}
-                    />
-                  </td>
-                  <td className="w-24 px-2 py-3">
-                    <EditableInput
-                      propertyId={property.id}
-                      field="middleName"
-                      value={data.middleName}
-                      onDataChange={onDataChange}
-                    />
-                  </td>
-                  <td className="w-28 px-2 py-3">
-                    <EditableInput
-                      propertyId={property.id}
-                      field="lastName"
-                      value={data.lastName}
-                      required
-                      onDataChange={onDataChange}
-                    />
-                  </td>
+                  {provider.provider_id === "enformion" && (
+                    <>
+                      <td className="w-28 px-2 py-3">
+                        <EditableInput
+                          propertyId={property.id}
+                          field="firstName"
+                          value={data.firstName}
+                          required
+                          onDataChange={onDataChange}
+                        />
+                      </td>
+                      <td className="w-24 px-2 py-3">
+                        <EditableInput
+                          propertyId={property.id}
+                          field="middleName"
+                          value={data.middleName}
+                          onDataChange={onDataChange}
+                        />
+                      </td>
+                      <td className="w-28 px-2 py-3">
+                        <EditableInput
+                          propertyId={property.id}
+                          field="lastName"
+                          value={data.lastName}
+                          required
+                          onDataChange={onDataChange}
+                        />
+                      </td>
+                    </>
+                  )}
                   <td className="w-36 px-2 py-3">
                     <EditableInput
                       propertyId={property.id}

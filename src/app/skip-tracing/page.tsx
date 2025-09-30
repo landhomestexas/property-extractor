@@ -33,7 +33,10 @@ interface EditablePropertyData {
   zip: string;
 }
 import SessionCard from "@/components/SessionCard";
-import { processEnformionResponse } from "@/utils/contactDataProcessor";
+import {
+  processEnformionResponse,
+  processBatchDataResponse,
+} from "@/utils/contactDataProcessor";
 import Link from "next/link";
 import { NoPropertiesSelected } from "@/components/EmptyStates";
 
@@ -164,9 +167,10 @@ export default function SkipTracingPage() {
       return;
     }
 
-    if (provider.provider_id === "batchdata") {
+    // Check if provider is available
+    if (provider.provider_id === "whitepages") {
       alert(
-        "BatchData is currently disabled pending documentation review. Please use Contact Enrichment or Address ID."
+        "WhitePages API is not available at the moment, please select another provider."
       );
       setIsProcessing(false);
       return;
@@ -187,7 +191,9 @@ export default function SkipTracingPage() {
 
         try {
           const apiRoute =
-            provider.endpoint === "/Address/Id"
+            provider.provider_id === "batchdata"
+              ? "/api/skip-trace/batchdata"
+              : provider.endpoint === "/Address/Id"
               ? "/api/skip-trace/enformion-address"
               : "/api/skip-trace/enformion";
 
@@ -224,7 +230,10 @@ export default function SkipTracingPage() {
           }
 
           if (result && result.status === "completed") {
-            const contactData = processEnformionResponse(result.data);
+            const contactData =
+              provider.provider_id === "batchdata"
+                ? processBatchDataResponse(result.data)
+                : processEnformionResponse(result.data);
             contactData.endpointUsed = result.endpointUsed || provider.name;
             if (result.foundPersonName) {
               contactData.foundPersonName = result.foundPersonName;

@@ -15,17 +15,26 @@ export const SKIP_TRACE_PROVIDERS: SkipTraceProvider[] = [
     provider_id: 'batchdata',
     name: 'BatchData',
     costPerSearch: '$0.25',
-    description: 'Currently disabled - pending documentation review',
-    endpoint: '/v1/skip-trace',
+    description: 'Skip trace using property address information',
+    endpoint: '/api/v1/property/skip-trace',
     method: 'POST',
     bodyTemplate: {
-      firstName: '',
-      lastName: '',
-      address: '',
-      city: '',
-      state: '',
-      zip: ''
+      propertyAddress: {
+        city: '',
+        street: '',
+        state: '',
+        zip: ''
+      }
     }
+  },
+  {
+    provider_id: 'whitepages',
+    name: 'WhitePages API',
+    costPerSearch: 'TBD',
+    description: 'Not available at the moment, please select another provider',
+    endpoint: '/api/v1/skip-trace',
+    method: 'POST',
+    bodyTemplate: {}
   },
   {
     provider_id: 'enformion',
