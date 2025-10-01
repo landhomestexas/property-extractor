@@ -62,17 +62,6 @@ export function processEnformionResponse(apiResponse: EnformionApiResponse): Con
 }
 
 export function processBatchDataResponse(apiResponse: unknown): ContactData {
-  console.log('🔍 BatchData Response Processor - Raw Input:', {
-    responseType: typeof apiResponse,
-    isNull: apiResponse === null,
-    isUndefined: apiResponse === undefined,
-    keys: apiResponse && typeof apiResponse === 'object' ? Object.keys(apiResponse) : 'N/A',
-    hasName: !!(apiResponse as BatchDataPerson)?.name,
-    hasPhoneNumbers: !!(apiResponse as BatchDataPerson)?.phoneNumbers,
-    hasEmails: !!(apiResponse as BatchDataPerson)?.emails,
-    fullResponse: apiResponse
-  });
-
   const mobiles: string[] = [];
   const landlines: string[] = [];
   const emails: string[] = [];
@@ -92,14 +81,14 @@ export function processBatchDataResponse(apiResponse: unknown): ContactData {
           } else if (phone.type === 'Land Line') {
             landlines.push(phone.number);
           } else {
-            console.log(`❓ Unknown phone type: ${phone.type} for ${phone.number}`);
+            console.error(`❓ Unknown phone type: ${phone.type} for ${phone.number}`);
           }
         } else {
-          console.log(`⚠️ Phone object missing number:`, phone);
+          console.error(`⚠️ Phone object missing number:`, phone);
         }
       });
     } else {
-      console.log('⚠️ No phoneNumbers array found or not an array:', person.phoneNumbers);
+      console.error('⚠️ No phoneNumbers array found or not an array:', person.phoneNumbers);
     }
 
     if (person.emails && Array.isArray(person.emails)) {      
@@ -108,11 +97,11 @@ export function processBatchDataResponse(apiResponse: unknown): ContactData {
         if (emailObj.email) {
           emails.push(emailObj.email);
         } else {
-          console.log(`⚠️ Email object missing email field:`, emailObj);
+          console.error(`⚠️ Email object missing email field:`, emailObj);
         }
       });
     } else {
-      console.log('⚠️ No emails array found or not an array:', person.emails);
+      console.error('⚠️ No emails array found or not an array:', person.emails);
     }
 
   } catch (error) {

@@ -10,6 +10,8 @@ interface Property {
   mktValue: number | null;
   gisArea: number | null;
   county: string;
+  county_id?: number | null;
+  tempUserNumber?: string | null;
 }
 
 interface PropertyStore {
@@ -30,6 +32,7 @@ interface PropertyStore {
   checkAllForSkipTrace: () => void;
   uncheckAllForSkipTrace: () => void;
   removeProperty: (propertyId: number) => void;
+  generateTempUserNumber: (propertyId: number, countyId: number) => Promise<void>;
 }
 
 export const usePropertyStore = create<PropertyStore>((set, get) => ({
@@ -84,6 +87,28 @@ export const usePropertyStore = create<PropertyStore>((set, get) => ({
       propertyDetails = details[propertyId];
       
       if (propertyDetails) {
+        if (propertyDetails.county_id) {
+          try {
+            const state = get();
+            const existingTempNumbers = state.selectedProperties
+              .map(p => p.tempUserNumber)
+              .filter((num): num is string => num !== null && num !== undefined);
+            
+            const params = new URLSearchParams({
+              countyId: propertyDetails.county_id.toString(),
+              ...(existingTempNumbers.length > 0 && { existingTempNumbers: existingTempNumbers.join(',') })
+            });
+            
+            const tempResponse = await fetch(`/api/temp-user-number?${params.toString()}`);
+            if (tempResponse.ok) {
+              const { tempUserNumber } = await tempResponse.json();
+              propertyDetails.tempUserNumber = tempUserNumber;
+            }
+          } catch (error) {
+            console.warn('Failed to generate temp user number:', error);
+          }
+        }
+        
         set(state => ({
           selectedProperties: state.selectedProperties.map(p => 
             p.id === propertyId ? propertyDetails : p
@@ -132,4 +157,36 @@ export const usePropertyStore = create<PropertyStore>((set, get) => ({
       checkedForSkipTrace: newChecked
     };
   }),
+  
+  generateTempUserNumber: async (propertyId: number, countyId: number) => {
+    try {
+      const state = get();
+      const existingTempNumbers = state.selectedProperties
+        .map(p => p.tempUserNumber)
+        .filter((num): num is string => num !== null && num !== undefined);
+      
+      const params = new URLSearchParams({
+        countyId: countyId.toString(),
+        ...(existingTempNumbers.length > 0 && { existingTempNumbers: existingTempNumbers.join(',') })
+      });
+      
+      const response = await fetch(`/api/temp-user-number?${params.toString()}`);
+      if (response.ok) {
+        const { tempUserNumber } = await response.json();
+        set(state => ({
+          selectedProperties: state.selectedProperties.map(p => 
+            p.id === propertyId ? { ...p, tempUserNumber } : p
+          ),
+          propertyDetails: {
+            ...state.propertyDetails,
+            [propertyId]: state.propertyDetails[propertyId] ? 
+              { ...state.propertyDetails[propertyId], tempUserNumber } : 
+              state.propertyDetails[propertyId]
+          }
+        }));
+      }
+    } catch (error) {
+      console.warn('Failed to generate temp user number:', error);
+    }
+  },
 }));

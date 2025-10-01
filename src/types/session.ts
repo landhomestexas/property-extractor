@@ -8,6 +8,7 @@ export interface Property {
   mktValue: number | null;
   gisArea: number | null;
   county: string;
+  tempUserNumber?: string | null;
 }
 
 export interface EditablePropertyData {

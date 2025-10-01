@@ -11,6 +11,7 @@ interface PropertyDetails {
   mktValue: number | null;
   gisArea: number | null;
   county: string;
+  county_id: number | null;
   geometry?: string;
 }
 
@@ -31,7 +32,7 @@ export async function GET(request: NextRequest) {
     
     const { data: properties, error } = await supabase
       .from('properties')
-      .select('id, prop_id, owner_name, situs_addr, mail_addr, land_value, mkt_value, gis_area, county, geometry')
+      .select('id, prop_id, owner_name, situs_addr, mail_addr, land_value, mkt_value, gis_area, county, county_id, geometry')
       .in('id', ids);
 
     if (error) throw error;
@@ -47,6 +48,7 @@ export async function GET(request: NextRequest) {
         mktValue: prop.mkt_value,
         gisArea: prop.gis_area,
         county: prop.county,
+        county_id: prop.county_id,
         geometry: prop.geometry,
       };
       return acc;

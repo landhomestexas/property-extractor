@@ -14,6 +14,7 @@ interface Property {
   mktValue: number | null;
   gisArea: number | null;
   county: string;
+  tempUserNumber?: string | null;
 }
 
 interface EditablePropertyData {
@@ -27,7 +28,6 @@ interface EditablePropertyData {
   zip: string;
 }
 
-// Create a simple input component that doesn't get recreated
 function EditableInput({
   propertyId,
   field,
@@ -73,15 +73,14 @@ function parseInitialData(property: Property): EditablePropertyData {
   let lastName = "";
   let middleName = "";
 
-  // Property records format: "LAST FIRST MIDDLE" (e.g., "BISCOTTO MARK A")
   const nameParts = ownerName.split(" ").filter(Boolean);
 
   if (nameParts.length >= 2) {
-    lastName = nameParts[0]; // First word is last name
-    firstName = nameParts[1]; // Second word is first name
-    middleName = nameParts.slice(2).join(" "); // Rest is middle name
+    lastName = nameParts[0];
+    firstName = nameParts[1];
+    middleName = nameParts.slice(2).join(" ");
   } else if (nameParts.length === 1) {
-    lastName = nameParts[0]; // Only one name, treat as last name
+    lastName = nameParts[0];
     firstName = "";
     middleName = "";
   }
@@ -216,7 +215,7 @@ export default function EditableSkipTraceTable({
                       {property.ownerName}
                     </div>
                     <div className="text-xs text-gray-500">
-                      ID: {property.propId}
+                      ID: {property.tempUserNumber || property.propId}
                     </div>
                   </td>
                   {provider.provider_id === "enformion" && (

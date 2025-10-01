@@ -57,7 +57,7 @@ export default function SessionInputTable({
                     {property.ownerName}
                   </div>
                   <div className="text-xs text-gray-500">
-                    ID: {property.propId}
+                    ID: {property.tempUserNumber || property.propId}
                   </div>
                 </td>
                 <td className="w-28 px-3 py-2 text-sm text-gray-900">

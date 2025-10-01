@@ -4,6 +4,7 @@ interface SavedProperty {
   id: number;
   property_id: number;
   created_at: string;
+  user_number: string | null;
   properties?: {
     id: number;
     prop_id: string;

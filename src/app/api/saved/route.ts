@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
+import { getNextUserNumber } from '@/utils/propertyNumbering';
 
 export async function GET(request: NextRequest) {
   try {
@@ -16,7 +17,8 @@ export async function GET(request: NextRequest) {
         .select(`
           id,
           property_id,
-          created_at
+          created_at,
+          user_number
           ${includeDetails ? `,
           properties!saved_properties_property_id_fkey!inner (
             id,
@@ -38,7 +40,8 @@ export async function GET(request: NextRequest) {
         .select(`
           id,
           property_id,
-          created_at
+          created_at,
+          user_number
           ${includeDetails ? `,
           properties!saved_properties_property_id_fkey!inner (
             id,
@@ -60,7 +63,8 @@ export async function GET(request: NextRequest) {
         .select(`
           id,
           property_id,
-          created_at
+          created_at,
+          user_number
           ${includeDetails ? `,
           properties!saved_properties_property_id_fkey (
             id,
@@ -107,7 +111,7 @@ export async function POST(request: NextRequest) {
 
     const { data: existing } = await supabase
       .from('saved_properties')
-      .select('id')
+      .select('id, user_number')
       .eq('property_id', propertyId)
       .single();
 
@@ -115,19 +119,39 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ 
         ok: true, 
         alreadySaved: true,
+        userNumber: existing.user_number,
         message: 'Property is already saved'
       });
     }
 
+    const { data: property, error: propertyError } = await supabase
+      .from('properties')
+      .select('county_id')
+      .eq('id', propertyId)
+      .single();
+
+    if (propertyError || !property?.county_id) {
+      return NextResponse.json(
+        { error: 'Property not found or missing county information' },
+        { status: 400 }
+      );
+    }
+
+    const userNumber = await getNextUserNumber(property.county_id);
+
     const { error } = await supabase
       .from('saved_properties')
-      .insert({ property_id: propertyId });
+      .insert({ 
+        property_id: propertyId,
+        user_number: userNumber
+      });
 
     if (error) throw error;
 
     return NextResponse.json({ 
       ok: true, 
       alreadySaved: false,
+      userNumber: userNumber,
       message: 'Property saved successfully'
     });
     
