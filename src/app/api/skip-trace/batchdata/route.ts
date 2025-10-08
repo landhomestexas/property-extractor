@@ -109,18 +109,6 @@ export async function POST(request: NextRequest) {
         request.propertyAddress.street = property.street || '';
         request.propertyAddress.state = property.state || '';
         request.propertyAddress.zip = property.zip || '';
-        
-        console.log(`🔍 BatchData Property ${property.propertyId} mapping:`, {
-          propertyId: property.propertyId,
-          formData: {
-            street: property.street,
-            city: property.city,
-            state: property.state,
-            zip: property.zip
-          },
-          mappedRequest: request
-        });
-        
         return request;
       })
     };

@@ -1,36 +1,100 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Property Extractor & Skip Tracing Tool
 
-## Getting Started
+A web application for property research and skip tracing in Texas counties. Visualize property boundaries on interactive maps, extract property data, and perform skip tracing to find contact information for property owners.
 
-First, run the development server:
+## Features
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+- **Interactive Map Interface** - View property boundaries with Leaflet maps
+- **Multi-County Support** - Burnet, Madison, and Burleson counties
+- **Property Details** - View owner information, addresses, and property values
+- **Skip Tracing** - Integration with BatchData and TruePeopleSearch APIs
+- **Data Export** - Export results to CSV format
+- **Property Management** - Save and organize selected properties
+
+## Tech Stack
+
+- **Frontend**: Next.js 15, React 19, TypeScript, Tailwind CSS
+- **Maps**: Leaflet, VectorGrid
+- **State Management**: Zustand
+- **Database**: PostgreSQL with PostGIS, Supabase
+- **APIs**: BatchData, Enformion/TruePeopleSearch
+
+## Quick Start
+
+1. **Install dependencies**
+
+   ```bash
+   npm install
+   ```
+
+2. **Set up environment variables**
+
+   Create a `.env.local` file:
+
+   ```env
+   DATABASE_URL="postgresql://username:password@localhost:5432/database"
+   NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
+   NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
+   BATCHDATA_API_KEY=your_batchdata_api_key
+   ENFORMION_API_KEY=your_enformion_api_key
+   ```
+
+3. **Start the database**
+
+   ```bash
+   docker-compose up -d
+   ```
+
+4. **Run the development server**
+
+   ```bash
+   npm run dev
+   ```
+
+5. **Open** [http://localhost:3000](http://localhost:3000)
+
+## Project Structure
+
+```
+property-extractor/
+├── src/
+│   ├── app/                  # Next.js app routes
+│   │   ├── api/             # API endpoints
+│   │   └── skip-tracing/    # Skip tracing page
+│   ├── components/          # React components
+│   ├── hooks/              # Custom hooks
+│   ├── stores/             # Zustand stores
+│   └── utils/              # Utility functions
+├── data/                   # GeoJSON property data
+├── scripts/                # Data import scripts
+├── sql/                    # SQL scripts
+└── supabase/              # Database migrations
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Usage
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### Property Selection
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+1. Select a county from the dropdown
+2. Click "Show Boundaries" to load property data
+3. Click properties to select them
+4. View details in the property panel
 
-## Learn More
+### Skip Tracing
 
-To learn more about Next.js, take a look at the following resources:
+1. Navigate to the Skip Tracing page
+2. Select properties for skip tracing
+3. Choose a provider (BatchData or TruePeopleSearch)
+4. Start the skip trace process
+5. Export results to CSV
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Available Scripts
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+- `npm run dev` - Start development server
+- `npm run build` - Build for production
+- `npm start` - Start production server
+- `npm run lint` - Run ESLint
 
-## Deploy on Vercel
+## License
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Proprietary software developed for LandHome Texas property research operations.
